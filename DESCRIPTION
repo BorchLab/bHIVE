@@ -1,6 +1,6 @@
 Package: bHIVE
 Title: B-cell Hybrid Immune Variant Engine
-Version: 0.99.0
+Version: 0.99.1
 Authors@R: c(
     person(given = "Nick", family = "Borcherding", role = c("aut", "cre"), email = "ncborch@gmail.com"))
 Description: The bHIVE package implements an Artificial Immune Network (AI-Net) algorithm for clustering, classification, and regression tasks. Inspired by biological immune systems, it employs clonal selection, mutation, and network suppression to analyze and model datasets. This package provides flexible functionality, including affinity metrics, mutation strategies, and hyperparameter tuning.
@@ -8,18 +8,23 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.2
-biocViews: Software, Classification, Annotation, Regression, Classification
-Depends: 
+biocViews: Software, Clustering, Classification, Regression
+Depends:
     R (>= 4.0.0)
-Imports: 
+Imports:
     BiocParallel,
     cluster,
     clusterCrit,
     ggplot2,
+    R6,
+    Rcpp,
     Rtsne,
     stats,
     umap,
     viridis
+LinkingTo:
+    Rcpp,
+    RcppArmadillo
 Suggests:
     BiocStyle,
     caret, 
