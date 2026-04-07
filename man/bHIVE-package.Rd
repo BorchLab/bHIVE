@@ -5,12 +5,14 @@
 \alias{bHIVE-package}
 \title{bHIVE: B-cell Hybrid Immune Variant Engine}
 \description{
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+
 The bHIVE package implements an Artificial Immune Network (AI-Net) algorithm for clustering, classification, and regression tasks. Inspired by biological immune systems, it employs clonal selection, mutation, and network suppression to analyze and model datasets. This package provides flexible functionality, including affinity metrics, mutation strategies, and hyperparameter tuning.
 }
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://www.borch.dev/uploads/bHIVE/}
+  \item \url{https://www.borch.dev/uploads/bhive/}
   \item Report bugs at \url{https://github.com/BorchLab/bHIVE/issues}
 }
 

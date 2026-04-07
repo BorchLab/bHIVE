@@ -1,0 +1,120 @@
+url: https://www.borch.dev/uploads/bhive/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+  bslib:
+    primary: "#F5A623"
+
+home:
+  title: bHIVE - B-cell Hybrid Immune Variant Engine
+  description: >
+    Modular Artificial Immune System framework for clustering, classification,
+    and regression in R. C++ backend via RcppArmadillo with composable
+    biologically-inspired modules.
+
+navbar:
+  structure:
+    left: [intro, articles, reference, news]
+    right: [search, github]
+  components:
+    intro:
+      text: Get Started
+      href: articles/bHIVE.html
+    articles:
+      text: Tutorials
+      menu:
+        - text: "Getting Started"
+          href: articles/bHIVE.html
+        - text: "---"
+        - text: "Immune Modules"
+          href: articles/immune-modules.html
+        - text: "Advanced Tuning & Workflows"
+          href: articles/advanced-workflows.html
+    reference:
+      text: Reference
+      href: reference/index.html
+    news:
+      text: News
+      href: news/index.html
+    github:
+      icon: fa-github
+      href: https://github.com/BorchLab/bHIVE
+      aria-label: GitHub
+
+reference:
+  - title: "Core Functions"
+    desc: >
+      The primary interface for running bHIVE algorithms. Use `bHIVE()` for
+      single-pass analysis, `honeycombHIVE()` for multilayer hierarchical
+      refinement, and `refineB()` for gradient-based post-processing.
+    contents:
+      - bHIVE
+      - honeycombHIVE
+      - refineB
+      - visualizeHIVE
+
+  - title: "Hyperparameter Tuning"
+    desc: >
+      Grid search over bHIVE hyperparameters with BiocParallel support.
+    contents:
+      - swarmbHIVE
+
+  - title: "R6 Algorithm Classes"
+    desc: >
+      Object-oriented interface for composing immune algorithms with
+      injectable modules. `AINet` is the primary class; `ImmuneAlgorithm`
+      is the abstract base.
+    contents:
+      - AINet
+      - ImmuneAlgorithm
+      - ImmuneRepertoire
+
+  - title: "Mutation & Selection Modules"
+    desc: >
+      Modules controlling how antibodies mutate, compete, and are selected.
+      Inject these into `AINet$new()` to customize algorithm behavior.
+    contents:
+      - SHMEngine
+      - GerminalCenter
+      - VDJLibrary
+
+  - title: "Network Regulation Modules"
+    desc: >
+      Modules for repertoire regulation and activation control.
+    contents:
+      - IdiotypicNetwork
+      - ActivationGate
+
+  - title: "Adaptation & Memory Modules"
+    desc: >
+      Modules for environment-driven adaptation, memory, and ensemble methods.
+    contents:
+      - Microenvironment
+      - MemoryPool
+      - ClassSwitcher
+      - ConvergentSelector
+
+  - title: "caret Integration"
+    desc: >
+      Model objects for use with the caret package's `train()` function.
+    contents:
+      - bHIVEmodel
+      - honeycombHIVEmodel
+
+articles:
+  - title: "Getting Started"
+    navbar: ~
+    contents:
+      - bHIVE
+  - title: "Tutorials"
+    contents:
+      - immune-modules
+      - advanced-workflows
+
+figures:
+  dev: ragg::agg_png
+  dpi: 150
+  fig.ext: png
+  fig.width: 7
+  fig.height: 5

@@ -6,11 +6,10 @@ Authors@R: c(
 Description: The bHIVE package implements an Artificial Immune Network (AI-Net) algorithm for clustering, classification, and regression tasks. Inspired by biological immune systems, it employs clonal selection, mutation, and network suppression to analyze and model datasets. This package provides flexible functionality, including affinity metrics, mutation strategies, and hyperparameter tuning.
 License: MIT + file LICENSE 
 Encoding: UTF-8
-LazyData: true
 RoxygenNote: 7.3.3
-biocViews: Software, Clustering, Classification, Regression
+biocViews: Software, Clustering, Classification, Regression, Network
 Depends:
-    R (>= 4.0.0)
+    R (>= 4.5.0)
 Imports:
     BiocParallel,
     cluster,
@@ -27,15 +26,16 @@ LinkingTo:
     RcppArmadillo
 Suggests:
     BiocStyle,
-    caret, 
+    caret,
     devtools,
     knitr,
     MASS,
+    pkgdown,
     rmarkdown,
     spelling,
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Language: en-US
-URL: https://www.borch.dev/uploads/bHIVE/
+URL: https://www.borch.dev/uploads/bhive/
 BugReports: https://github.com/BorchLab/bHIVE/issues

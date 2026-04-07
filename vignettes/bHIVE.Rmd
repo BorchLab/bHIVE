@@ -61,8 +61,6 @@ The behavior of the `bHIVE` function can be fine-tuned using a range of hyperpar
 | `seed`                | Random seed for reproducibility.                                                                             |
 | `verbose`             | Logical. If `TRUE`, prints progress messages for each iteration.                                             |
 
----
-
 ### How `bHIVE` Works
 
 1. **Affinity Calculation**: Measures the similarity between each data point and antibodies using a specified `affinityFunc`.
