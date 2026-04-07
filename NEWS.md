@@ -38,6 +38,45 @@
 * `ConvergentSelector` — Cross-repertoire consensus identification of public
   antibodies for ensemble methods
 
+## Documentation
+* Complete README rewrite covering functional API, R6 API, module reference
+  table, and architecture overview
+* New pkgdown website with Bootstrap 5 Flatly theme, organized reference groups,
+  and tutorial navigation
+* New article: "Composing Immune Modules" — R6 composition patterns for all 9
+  modules with worked examples
+* New article: "Advanced Tuning & Workflows" — swarmbHIVE grid search,
+  honeycombHIVE multilayer refinement, refineB optimizer comparison, caret
+  integration, and visualizeHIVE plot types
+* New article: "Algorithm & Biological Foundations" — comprehensive mathematical
+  reference covering all affinity kernels, distance functions, SHM strategies,
+  idiotypic ODE system, germinal center selection, and parameter guidance
+* Added roxygen @examples to refineB, bHIVEmodel, and ImmuneAlgorithm (now 90%
+  example coverage)
+* GitHub Actions workflow for automated pkgdown deployment to borch.dev
+
+## Package Infrastructure
+* Created `R/bHIVE-package.R` with roxygen-managed `@useDynLib` and
+ `@importFrom Rcpp sourceCpp` directives
+* Added `%||%` operator `@name null-coalesce` to avoid illegal characters in Rd
+  `\name` field
+* Moved tutorial vignettes to `vignettes/articles/` (pkgdown-only, not installed
+  with package) to reduce installed size
+* Added pkgdown configuration (`_pkgdown.yml`) with 7 reference groups and
+  structured article hierarchy
+
+## BiocCheck Compliance
+* Replaced all `sapply()` calls with `vapply()` in bHiVE.R and visualizeHIVE.R
+* Replaced all `1:n` patterns with `seq_len()` / `seq_along()`
+* Removed `install.packages()` calls from vignettes
+* Removed `LazyData: true` from DESCRIPTION
+* Updated R dependency to >= 4.5.0
+* Updated biocViews to `Software, Clustering, Classification, Regression,
+  Network`
+* Added class-level `@param` documentation for all R6 initialize() arguments
+  across 11 module classes
+* Added `@param ... Not used.` to all R6 `print()` methods
+
 ## Bug Fixes
 * Fixed kmeans++ sampling: corrected cumulative sum fallback index and
   runif-to-integer cast
@@ -47,6 +86,7 @@
 * Fixed VDJLibrary NaN in kmeans for single-allele edge cases
 * Fixed VDJLibrary NA subscript when feature dimensions not divisible by 3
 * Removed duplicate `Classification` from biocViews, added `Clustering`
+* Fixed vignette YAML parsing error from bare `---` horizontal rule
 
 # bHIVE 0.99.0
 
