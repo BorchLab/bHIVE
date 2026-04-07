@@ -26,12 +26,10 @@ navbar:
       menu:
         - text: "Getting Started"
           href: articles/bHIVE.html
-        - text: "---"
         - text: "Immune Modules"
           href: articles/articles/immune-modules.html
         - text: "Advanced Tuning & Workflows"
           href: articles/articles/advanced-workflows.html
-        - text: "---"
         - text: "Algorithm & Biological Foundations"
           href: articles/articles/foundations.html
     reference:

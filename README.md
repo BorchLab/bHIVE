@@ -2,11 +2,11 @@
 
 ## B-cell Hybrid Immune Variant Engine
 
-<img align="right" src="https://github.com/BorchLab/bHive/blob/main/www/bhive_hex.png" width="305" height="352">
+<img align="right" src="man/figures/logo.png" width="305" height="352">
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/BorchLab/bHive/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/BorchLab/bHive/actions/workflows/R-CMD-check.yaml)
-[![Codecov test coverage](https://codecov.io/gh/BorchLab/bHive/graph/badge.svg)](https://app.codecov.io/gh/BorchLab/bHive)
+[![R-CMD-check](https://github.com/BorchLab/bHIVE/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/BorchLab/bHIVE/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/BorchLab/bHIVE/graph/badge.svg)](https://app.codecov.io/gh/BorchLab/bHIVE)
 <!-- badges: end -->
 
 ### Overview
@@ -90,7 +90,7 @@ bHIVE evolves a population of antibody vectors to represent structure in data:
 4. **Network regulation** -- suppress redundant antibodies via distance threshold or idiotypic network dynamics
 5. **Final assignment** -- data points assigned to nearest antibody by affinity or distance
 
-<img align="center" src="https://github.com/BorchLab/bHive/blob/main/www/iterativeGraphic.png">
+<img align="center" src="https://github.com/BorchLab/bHIVE/blob/main/www/iterativeGraphic.png">
 
 ### Immune Modules
 

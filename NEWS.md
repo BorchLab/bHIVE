@@ -65,6 +65,13 @@
 * Added pkgdown configuration (`_pkgdown.yml`) with 7 reference groups and
   structured article hierarchy
 
+## Testing
+* Added comprehensive unit tests for all 12 R6 module classes (ImmuneRepertoire,
+  ImmuneAlgorithm, AINet, SHMEngine, IdiotypicNetwork, GerminalCenter,
+  Microenvironment, VDJLibrary, ActivationGate, MemoryPool, ClassSwitcher,
+  ConvergentSelector) and C++ backend functions
+* Test coverage increased from ~26% to ~85% (681 tests, 0 failures)
+
 ## BiocCheck Compliance
 * Replaced all `sapply()` calls with `vapply()` in bHiVE.R and visualizeHIVE.R
 * Replaced all `1:n` patterns with `seq_len()` / `seq_along()`

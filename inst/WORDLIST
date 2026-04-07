@@ -3,6 +3,7 @@ ActivationGate
 Adagrad
 Annales
 BCR
+BiocCheck
 BiocParallel
 Bretscher
 Burnet
@@ -56,6 +57,7 @@ Parallelization
 Pentameric
 Perelson
 RBF
+README
 RGYW
 RMSProp
 RcppArmadillo
@@ -81,10 +83,12 @@ aiNet
 anergized
 bHIVES
 bHIVEmodel
+bHiVE
 bigl
 bigr
 biocViews
 boldsymbol
+borch
 bouldin
 bpparam
 calinski
@@ -106,6 +110,7 @@ dA
 davies
 de
 deaminase
+dev
 diag
 dt
 effector
@@ -167,6 +172,7 @@ param
 paratope
 pca
 pentameric
+pkgdown
 poisson
 pred
 propto
@@ -176,6 +182,7 @@ responder
 rfloor
 rmse
 rmsprop
+roxygen
 runif
 sds
 sgd
