@@ -266,7 +266,7 @@ bHIVE <- function(X,
       
       # Identify top k antibodies
       k2 <- min(k, m)
-      top_idx <- sort.int(aff_values, decreasing=TRUE, index.return=TRUE)$ix[1:k2]
+      top_idx <- sort.int(aff_values, decreasing=TRUE, index.return=TRUE)$ix[seq_len(k2)]
       
       # classification/regression counters
       if (task == "classification") {
@@ -498,9 +498,9 @@ bHIVE <- function(X,
   # 3) Choose a new data point at random weighted by D(x)^2
   if (nCenters > 1) {
     for (cId in 2:nCenters) {
-      dists <- sapply(1:n, function(i) {
-        min(rowSums((centers[1:(cId-1), , drop = FALSE] - X[i, ])^2))
-      })
+      dists <- vapply(seq_len(n), function(i) {
+        min(rowSums((centers[seq_len(cId-1), , drop = FALSE] - X[i, ])^2))
+      }, numeric(1))
       probs <- dists / sum(dists)
       idx <- sample(n, 1, prob = probs)
       centers[cId, ] <- X[idx, ]

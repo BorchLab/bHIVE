@@ -1,0 +1,320 @@
+---
+title: "Composing Immune Modules"
+author:
+  name: Nick Borcherding
+  email: ncborch@gmail.com
+  affiliation: Washington University in St. Louis, School of Medicine, St. Louis, MO, USA
+date: "`r Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    toc_float: true
+---
+
+```{r, echo=FALSE, results="hide", message=FALSE}
+knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE, tidy = FALSE)
+library(bHIVE)
+library(ggplot2)
+library(viridis)
+```
+
+# Introduction
+
+The bHIVE package provides two equivalent interfaces: a **functional API**
+(`bHIVE()`) for quick, one-liner analysis and an **R6 class API** (`AINet`)
+for full compositional control. This vignette focuses on the R6 API and
+the 9 immune modules that can be injected into `AINet` to customize every
+stage of the algorithm.
+
+Each module is an independent R6 class that encapsulates a single
+immunological mechanism. You create modules separately and pass them to
+`AINet$new()`, allowing you to mix and match any combination.
+
+```{r module-overview, eval=FALSE}
+model <- AINet$new(
+  nAntibodies = 20,
+  shm            = SHMEngine$new(method = "adaptive"),
+  idiotypic      = IdiotypicNetwork$new(),
+  germinalCenter = GerminalCenter$new(),
+  microenvironment = Microenvironment$new(),
+  init           = VDJLibrary$new(method = "pca"),
+  activation     = ActivationGate$new(),
+  memory         = MemoryPool$new()
+)
+```
+
+# Somatic Hypermutation Engine
+
+The `SHMEngine` controls how antibodies mutate after cloning. Five
+strategies are available, each grounded in a different aspect of SHM biology:
+
+| Method | Biological Analogy | When to Use |
+|:-------|:-------------------|:------------|
+| `"uniform"` | Random point mutations | Baseline; simple and robust |
+| `"airs"` | Affinity-proportional mutation (AIRS) | When high-affinity antibodies should explore less |
+| `"hotspot"` | AID targets WRCY motifs | When some features matter more than others |
+| `"energy"` | E_SHM ~ N_Mut^2 budget constraint | When you want bounded total perturbation |
+| `"adaptive"` | Per-feature Adam-like moment tracking | Best for complex landscapes; most novel |
+
+The **adaptive** method is the most distinctive in which somatic hypermutation and the Adam optimizer function the same. Each feature dimension maintains running mean and variance of past gradients.
+
+```{r shm-comparison, fig.width=8, fig.height=4}
+data(iris)
+X <- as.matrix(iris[, 1:4])
+y <- iris$Species
+
+methods <- c("uniform", "airs", "adaptive")
+results <- lapply(methods, function(m) {
+  shm <- SHMEngine$new(method = m)
+  model <- AINet$new(nAntibodies = 15, 
+                     maxIter = 15, 
+                     shm = shm,
+                     verbose = FALSE)
+  model$fit(X, y, task = "classification")
+  data.frame(
+    method   = m,
+    accuracy = mean(model$result$assignments == as.character(y)),
+    n_ab     = nrow(model$repertoire$as_matrix())
+  )
+})
+do.call(rbind, results)
+```
+
+# Idiotypic Network Regulation
+
+In classical AIS, similar antibodies are suppressed via a simple distance
+threshold (epsilon). The `IdiotypicNetwork` module replaces this with
+principled network dynamics inspired by Varela & Coutinho's (1991)
+second-generation immune network theory.
+
+The key insight is a **bell-shaped activation function**: too little
+stimulation from other antibodies leads to death, moderate stimulation
+leads to activation, and excessive stimulation leads to suppression. This
+creates emergent self-organized repertoire structure.
+
+```{r idiotypic-demo}
+# Standard epsilon suppression (default)
+model_std <- AINet$new(nAntibodies = 25, maxIter = 15, verbose = FALSE)
+model_std$fit(X, task = "clustering")
+
+# Idiotypic network regulation
+model_idi <- AINet$new(
+  nAntibodies = 25, maxIter = 15,
+  idiotypic = IdiotypicNetwork$new(
+    theta_low = 0.01, 
+    theta_high = 0.5,
+    source_rate = 0.5, 
+    timeSteps = 20
+  ),
+  verbose = FALSE
+)
+model_idi$fit(X, task = "clustering")
+
+cat("Standard suppression:", model_std$repertoire$size(), "antibodies\n")
+cat("Idiotypic regulation:", model_idi$repertoire$size(), "antibodies\n")
+```
+
+The idiotypic network typically produces a more parsimonious repertoire
+because regulation is based on the *network* of antibody-antibody
+interactions rather than pairwise distance alone.
+
+# Germinal Center Selection
+
+The `GerminalCenter` module models the competition for T follicular helper
+(Tfh) cell help that occurs in real germinal centers. Only antibodies that
+receive Tfh help survive -- this implements quality-based selection pressure.
+
+The quality metric is task-aware:
+
+- **Classification**: proportion of correctly matched labels
+- **Regression**: inverse prediction error
+- **Clustering**: local density (sum of affinities to assigned data points)
+
+```{r gc-demo}
+gc <- GerminalCenter$new(
+  nTfh = 10,                 # number of Tfh selectors
+  selectionPressure = 0.5,   # 0 = no selection, 1 = very strict
+  rounds = 1
+)
+
+model_gc <- AINet$new(
+  nAntibodies = 30, 
+  maxIter = 15,
+  germinalCenter = gc,
+  verbose = FALSE
+)
+model_gc$fit(X, y, task = "classification")
+cat("Antibodies after GC selection:", model_gc$repertoire$size(), "\n")
+cat("Accuracy:", mean(model_gc$result$assignments == as.character(y)), "\n")
+```
+
+# Microenvironment
+
+The `Microenvironment` module classifies the local context around each
+antibody into three zones and adapts mutation rates accordingly:
+
+- **Stable** (high local density): reduce mutation rate to preserve
+  good antibodies
+- **Explore** (low local density): increase mutation rate to search
+  sparse regions
+- **Boundary** (intermediate): moderate mutation, potential trigger for
+  class switching
+
+```{r microenv-demo}
+me <- Microenvironment$new(
+  high_density_threshold = 0.75,
+  low_density_threshold = 0.25,
+  stabilization_factor = 0.3,   # reduce mutation to 30% in stable zones
+  exploration_factor = 2.0      # double mutation in exploration zones
+)
+
+rep <- ImmuneRepertoire$new(X[sample(150, 15), ])
+env <- me$assess(rep, X)
+table(env$zones)
+```
+
+# V(D)J Gene Library Initialization
+
+Instead of random sampling, `VDJLibrary` generates antibodies by
+combinatorial assembly of gene segments, mimicking V(D)J recombination.
+The feature space is split into three segments (V, D, J), each discretized
+into alleles, and new antibodies are built by combining one allele from
+each segment.
+
+```{r vdj-demo}
+vdj <- VDJLibrary$new(nV = 5, 
+                      nD = 3, 
+                      nJ = 3, 
+                      method = "pca")
+A <- vdj$generate(20, X)
+dim(A)  # 20 antibodies x 4 features
+print(vdj)
+```
+
+Three decomposition methods are available:
+
+- `"pca"`: PCA components define gene segments (best for correlated features)
+- `"cluster"`: k-means within dimension groups creates alleles
+- `"random_partition"`: random feature grouping (simplest)
+
+# Two-Signal Activation Gate
+
+In real immunity, B cells require two signals to activate: antigen
+recognition (Signal 1) *and* costimulatory context (Signal 2). The
+`ActivationGate` module prevents spurious cloning on isolated outliers.
+
+Signal 2 options:
+
+- `"density"`: local data density around the antibody
+- `"danger"`: user-provided danger score per data point
+- `"entropy"`: local label entropy (classification only)
+
+```{r activation-demo}
+gate <- ActivationGate$new(
+  signal2_type = "density",
+  threshold1 = 0.1,    # minimum affinity (Signal 1)
+  threshold2 = 0.3     # density percentile (Signal 2)
+)
+
+A <- X[sample(150, 10), ]
+rep <- ImmuneRepertoire$new(A)
+aff <- rep$affinity_matrix(X, "gaussian")
+activated <- gate$evaluate(aff, X, A)
+cat("Activated interactions:", sum(activated), "/", length(activated), "\n")
+```
+
+# Memory Pool
+
+The `MemoryPool` archives high-performing antibodies and recalls them
+when relevant to current data. This is useful for streaming or
+non-stationary data where distribution shifts may occur.
+
+```{r memory-demo}
+mp <- MemoryPool$new(
+  archive_threshold = 0.01,  # minimum average affinity to archive
+  max_memory = 50,
+  recall_threshold = 0.01
+)
+
+rep <- ImmuneRepertoire$new(X[sample(150, 10), ])
+n_archived <- mp$archive(rep, X)
+cat("Archived:", n_archived, "memory cells\n")
+cat("Pool size:", mp$size(), "\n")
+
+# Recall memories relevant to a subset
+recalled <- mp$recall(X[1:30, ])
+cat("Recalled:", nrow(recalled), "cells for the query\n")
+```
+
+# Class Switcher
+
+The `ClassSwitcher` module changes the effective kernel width of antibodies
+based on their microenvironment zone, analogous to real B cell isotype
+switching:
+
+| Isotype | Kernel Width | Matching Style |
+|:--------|:-------------|:---------------|
+| IgM | alpha = 0.1 | Broad (exploration) |
+| IgG | alpha = 5.0 | Specific (discrimination) |
+| IgA | alpha = 1.0 | Intermediate (boundary patrol) |
+
+```{r classswitcher-demo}
+cs <- ClassSwitcher$new(alpha_IgM = 0.1, alpha_IgG = 5.0, alpha_IgA = 1.0)
+
+rep <- ImmuneRepertoire$new(X[sample(150, 10), ])
+zones <- sample(c("stable", "explore", "boundary"), 10, replace = TRUE)
+alphas <- cs$switch_isotypes(rep, zones)
+data.frame(zone = zones, isotype = rep$metadata$isotype, alpha = alphas)
+```
+
+# Convergent Selection
+
+The `ConvergentSelector` identifies "public antibodies" -- antibodies that
+appear across multiple independent bHIVE runs. This implements the
+immunological concept of public clonotypes as a biologically-motivated
+ensemble method.
+
+```{r convergent-demo}
+# Run 3 independent bHIVE analyses
+set.seed(42)
+results <- lapply(1:3, function(i) {
+  m <- AINet$new(nAntibodies = 15, maxIter = 10, verbose = FALSE)
+  m$fit(X, task = "clustering")
+  m$result
+})
+
+conv <- ConvergentSelector$new(tolerance = 1.0, min_appearances = 2)
+public <- conv$from_results(results)
+cat("Public antibodies:", nrow(public), "\n")
+```
+
+# Putting It All Together
+
+Here is a full example combining multiple modules for a classification task:
+
+```{r full-example}
+model <- AINet$new(
+  nAntibodies = 25,
+  maxIter = 20,
+  k = 3,
+  beta = 5,
+  shm = SHMEngine$new(method = "adaptive", base_rate = 0.1),
+  idiotypic = IdiotypicNetwork$new(theta_low = 0.01, theta_high = 0.5),
+  germinalCenter = GerminalCenter$new(nTfh = 8, selectionPressure = 0.4),
+  verbose = FALSE
+)
+
+model$fit(X, y, task = "classification")
+
+cat("Final antibodies:", model$repertoire$size(), "\n")
+cat("Accuracy:", mean(model$result$assignments == as.character(y)), "\n")
+```
+
+Not every module combination will improve every dataset. The modular design
+lets you experiment with different biological mechanisms and find the
+combination that works best for your data and task.
+
+# Session Information
+
+```{r}
+sessionInfo()
+```

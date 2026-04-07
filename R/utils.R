@@ -1,5 +1,17 @@
 utils::globalVariables(c("PC1", "PC2", "Group", "Feature", "Prototype", "Layer"))
 
+#' Null-coalesce operator
+#'
+#' Returns \code{x} if it is not \code{NULL}, otherwise returns \code{y}.
+#' Used internally by bHIVE R6 classes for parameter defaults.
+#'
+#' @param x Value to test.
+#' @param y Default value if \code{x} is NULL.
+#' @return \code{x} if not NULL, otherwise \code{y}.
+#' @name null-coalesce
+#' @keywords internal
+`%||%` <- function(x, y) if (is.null(x)) y else x
+
 .validate_bHIVE_input <- function(X, 
                                   y = NULL) {
   if (!is.matrix(X) && !is.data.frame(X)) {

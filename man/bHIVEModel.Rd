@@ -118,6 +118,12 @@ probabilities <- predict(tunedModel, newdata = X, type = "prob")
 }
 }
 
+\examples{
+# View model structure
+bHIVEmodel$label
+bHIVEmodel$parameters
+
+}
 \seealso{
 \code{\link[caret]{train}}, \code{\link[caret]{trainControl}}
 }

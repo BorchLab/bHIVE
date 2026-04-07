@@ -16,7 +16,7 @@ vignette: >
 ---
 
 ```{r, echo=FALSE, results="hide", message=FALSE}
-knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE, tidy = FALSE)
 library(BiocStyle)
 library(bHIVE)
 library(ggplot2)
@@ -60,8 +60,6 @@ The behavior of the `bHIVE` function can be fine-tuned using a range of hyperpar
 | `k`                   | Number of top-matching antibodies to consider during cloning.                                               |
 | `seed`                | Random seed for reproducibility.                                                                             |
 | `verbose`             | Logical. If `TRUE`, prints progress messages for each iteration.                                             |
-
----
 
 ### How `bHIVE` Works
 
@@ -176,7 +174,6 @@ table(Predicted = res$assignments, Actual = y)
 **Regression** is a supervised learning task where the goal is to predict continuous numeric outcomes. In this example, we use the Boston housing dataset to predict the median home value (medv) using `bHIVE`.
 
 ```{r tidy = FALSE}
-if (!requireNamespace("MASS", quietly = TRUE)) install.packages("MASS")
 library(MASS)
 data(Boston)
 X <- as.matrix(Boston[, -14])

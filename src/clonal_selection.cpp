@@ -1,0 +1,260 @@
+// [[Rcpp::depends(RcppArmadillo)]]
+#include "affinity_distance.h"
+
+// Core clonal selection + mutation loop for one iteration
+//
+// For each data point:
+//   1. Compute affinity to all antibodies (uses pre-computed affinity matrix)
+//   2. Identify top-k antibodies
+//   3. Clone and mutate top-k, keeping improvements
+//   4. Accumulate task-specific statistics
+//
+// Returns a list with:
+//   - A: updated antibody matrix
+//   - class_counts: (classification) weighted vote matrix
+//   - sum_y: (regression) weighted sum of y values
+//   - sum_aff: (regression) sum of affinities
+//
+// [[Rcpp::export]]
+Rcpp::List clonal_selection_iteration_cpp(
+    arma::mat A,                     // passed by value (modified in place)
+    const arma::mat& X,
+    const arma::vec& y_num,          // numeric y (regression) or 0-indexed class int
+    int task_int,                    // 0=clustering, 1=classification, 2=regression
+    int k,
+    double beta,
+    double maxClones,
+    double mutationDecay,
+    double mutationMin,
+    int iter,
+    const std::string& affinity_type,
+    double alpha,
+    double c_param,
+    double p_param,
+    int nClasses) {
+
+  const arma::uword n = X.n_rows;
+  const arma::uword m = A.n_rows;
+  const arma::uword d = X.n_cols;
+  const TaskType task = static_cast<TaskType>(task_int);
+  const AffinityType aff_type = parse_affinity_type(affinity_type);
+
+  // Task-specific accumulators
+  arma::mat class_counts;
+  arma::vec sum_y, sum_aff;
+
+  if (task == TaskType::CLASSIFICATION) {
+    class_counts = arma::zeros<arma::mat>(m, nClasses);
+  } else if (task == TaskType::REGRESSION) {
+    sum_y = arma::zeros<arma::vec>(m);
+    sum_aff = arma::zeros<arma::vec>(m);
+  }
+
+  // Compute full affinity matrix (n x m) -- the big BLAS win
+  arma::mat aff_matrix = affinity_matrix_cpp(X, A, aff_type, alpha, c_param, p_param);
+
+  // Pre-compute decay factor for this iteration
+  const double decay_factor = std::pow(mutationDecay, iter - 1);
+
+  // Process each data point
+  for (arma::uword i = 0; i < n; ++i) {
+    const arma::rowvec aff_values = aff_matrix.row(i);
+
+    const double max_aff = aff_values.max();
+    if (max_aff <= 0.0 || !std::isfinite(max_aff)) continue;
+
+    // Top-k indices (descending by affinity)
+    const arma::uword k2 = std::min(static_cast<arma::uword>(k), m);
+    const arma::uvec sorted_idx = arma::sort_index(aff_values, "descend");
+    const arma::uvec top_idx = sorted_idx.head(k2);
+
+    // Task-specific accumulation
+    if (task == TaskType::CLASSIFICATION) {
+      const int class_col = static_cast<int>(y_num(i));
+      for (arma::uword ki = 0; ki < k2; ++ki) {
+        const arma::uword jj = top_idx(ki);
+        class_counts(jj, class_col) += aff_values(jj);
+      }
+    } else if (task == TaskType::REGRESSION) {
+      const double y_val = y_num(i);
+      for (arma::uword ki = 0; ki < k2; ++ki) {
+        const arma::uword jj = top_idx(ki);
+        sum_y(jj) += y_val * aff_values(jj);
+        sum_aff(jj) += aff_values(jj);
+      }
+    }
+
+    // Clone and mutate
+    const arma::rowvec x_i = X.row(i);
+    for (arma::uword ki = 0; ki < k2; ++ki) {
+      const arma::uword jj = top_idx(ki);
+      const double f_j = aff_values(jj);
+      const int nClonesInt = std::min(
+        static_cast<int>(maxClones),
+        static_cast<int>(std::floor(beta * (f_j / max_aff)))
+      );
+      if (nClonesInt <= 0) continue;
+
+      for (int clone_id = 0; clone_id < nClonesInt; ++clone_id) {
+        // Decayed mutation rate
+        const double mutation_rate = std::max(
+          (1.0 - f_j) * decay_factor,
+          mutationMin
+        );
+
+        // Generate mutated antibody
+        arma::rowvec noise(d);
+        for (arma::uword dd = 0; dd < d; ++dd) {
+          noise(dd) = R::rnorm(0.0, mutation_rate);
+        }
+        const arma::rowvec mutated = A.row(jj) + noise;
+
+        // Use scalar affinity (no matrix allocation in hot path)
+        const double f_mutated = affinity_scalar_cpp(
+          x_i, mutated, aff_type, alpha, c_param, p_param
+        );
+
+        if (std::isfinite(f_mutated) && f_mutated > f_j) {
+          A.row(jj) = mutated;
+          // Update the affinity column for this antibody going forward
+          // Use bulk computation since it updates for all n data points
+          arma::mat mutated_mat(1, d);
+          mutated_mat.row(0) = mutated;
+          aff_matrix.col(jj) = affinity_matrix_cpp(X, mutated_mat, aff_type,
+                                                    alpha, c_param, p_param).col(0);
+        }
+      }
+    }
+  }
+
+  return Rcpp::List::create(
+    Rcpp::Named("A") = A,
+    Rcpp::Named("class_counts") = class_counts,
+    Rcpp::Named("sum_y") = sum_y,
+    Rcpp::Named("sum_aff") = sum_aff
+  );
+}
+
+
+// Final assignment computation
+// For clustering/regression: assign each point to nearest antibody by distance
+// For classification: assign each point to antibody with highest affinity
+// [[Rcpp::export]]
+Rcpp::List final_assignment_cpp(
+    const arma::mat& X,
+    const arma::mat& A,
+    const std::string& affinity_type,
+    const std::string& dist_type,
+    int task_int,
+    double alpha,
+    double c_param,
+    double p_param,
+    const arma::mat& Sigma_inv,
+    const arma::vec& antibody_values,
+    double overall_mean) {
+
+  const arma::uword n = X.n_rows;
+  const TaskType task = static_cast<TaskType>(task_int);
+
+  if (task == TaskType::CLUSTERING) {
+    const DistanceType dtype = parse_distance_type(dist_type);
+    const arma::mat D = distance_matrix_cpp(X, A, dtype, p_param, Sigma_inv);
+    arma::uvec assignments(n);
+    for (arma::uword i = 0; i < n; ++i) {
+      assignments(i) = D.row(i).index_min();
+    }
+    const arma::ivec result = arma::conv_to<arma::ivec>::from(assignments) + 1;
+    return Rcpp::List::create(Rcpp::Named("assignments") = result);
+
+  } else if (task == TaskType::CLASSIFICATION) {
+    const AffinityType atype = parse_affinity_type(affinity_type);
+    const arma::mat aff = affinity_matrix_cpp(X, A, atype, alpha, c_param, p_param);
+    arma::uvec best_idx(n);
+    for (arma::uword i = 0; i < n; ++i) {
+      best_idx(i) = aff.row(i).index_max();
+    }
+    const arma::ivec result = arma::conv_to<arma::ivec>::from(best_idx) + 1;
+    return Rcpp::List::create(Rcpp::Named("best_antibody_idx") = result);
+
+  } else {
+    // Regression: weighted average + nearest cluster
+    const AffinityType atype = parse_affinity_type(affinity_type);
+    const arma::mat aff = affinity_matrix_cpp(X, A, atype, alpha, c_param, p_param);
+    arma::vec predictions(n);
+
+    for (arma::uword i = 0; i < n; ++i) {
+      const arma::rowvec aff_row = aff.row(i);
+      const double s_aff = arma::accu(aff_row);
+      if (s_aff <= 0.0) {
+        predictions(i) = overall_mean;
+      } else {
+        predictions(i) = arma::accu(aff_row.t() % antibody_values) / s_aff;
+      }
+    }
+
+    const DistanceType dtype = parse_distance_type(dist_type);
+    const arma::mat D = distance_matrix_cpp(X, A, dtype, p_param, Sigma_inv);
+    arma::uvec cluster_assign(n);
+    for (arma::uword i = 0; i < n; ++i) {
+      cluster_assign(i) = D.row(i).index_min();
+    }
+    const arma::ivec cluster_result = arma::conv_to<arma::ivec>::from(cluster_assign) + 1;
+
+    return Rcpp::List::create(
+      Rcpp::Named("predictions") = predictions,
+      Rcpp::Named("cluster_assign") = cluster_result
+    );
+  }
+}
+
+
+// kmeans++ initialization in C++
+// [[Rcpp::export]]
+arma::mat init_kmeanspp_cpp(const arma::mat& X, int nCenters) {
+  const arma::uword n = X.n_rows;
+  const arma::uword d = X.n_cols;
+  arma::mat centers(nCenters, d);
+
+  // Choose first center uniformly at random (safe int sampling)
+  arma::uword idx = static_cast<arma::uword>(std::floor(R::runif(0.0, static_cast<double>(n))));
+  if (idx >= n) idx = n - 1;  // guard against runif returning exactly n
+  centers.row(0) = X.row(idx);
+
+  if (nCenters > 1) {
+    arma::vec dists(n);
+
+    for (int cId = 1; cId < nCenters; ++cId) {
+      // Compute min squared distance to any chosen center
+      const arma::mat chosen = centers.rows(0, cId - 1);
+      arma::mat D = distance_matrix_cpp(X, chosen, DistanceType::EUCLIDEAN,
+                                        2.0, arma::mat());
+      D = D % D;  // square distances
+
+      // Min distance to any center for each point
+      dists = arma::min(D, 1);
+
+      // Sample proportional to squared distance
+      const double total = arma::accu(dists);
+      if (total <= 0.0) {
+        idx = static_cast<arma::uword>(std::floor(R::runif(0.0, static_cast<double>(n))));
+        if (idx >= n) idx = n - 1;
+      } else {
+        const arma::vec probs = dists / total;
+        const double r = R::runif(0.0, 1.0);
+        double cumsum = 0.0;
+        idx = 0;
+        for (arma::uword i = 0; i < n; ++i) {
+          cumsum += probs(i);
+          if (r <= cumsum) {
+            idx = i;
+            break;
+          }
+          idx = i;  // fallback: last element if rounding prevents reaching 1.0
+        }
+      }
+      centers.row(cId) = X.row(idx);
+    }
+  }
+
+  return centers;
+}
