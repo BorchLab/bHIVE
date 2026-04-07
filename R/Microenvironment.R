@@ -29,6 +29,12 @@
 #' table(env$zones)  # stable, explore, boundary
 #' env$mutation_modifiers  # per-antibody rate scaling
 #'
+#' @param density_bandwidth Numeric. KDE bandwidth (NULL for auto).
+#' @param high_density_threshold Numeric [0,1]. Percentile threshold for stabilization.
+#' @param low_density_threshold Numeric [0,1]. Percentile threshold for exploration.
+#' @param stabilization_factor Numeric. Mutation rate multiplier for stable zones.
+#' @param exploration_factor Numeric. Mutation rate multiplier for exploration zones.
+#'
 #' @importFrom R6 R6Class
 #' @export
 Microenvironment <- R6::R6Class(
@@ -139,6 +145,7 @@ Microenvironment <- R6::R6Class(
     },
 
     #' @description Print summary.
+    #' @param ... Not used.
     print = function(...) {
       cat("<Microenvironment>\n")
       cat(sprintf("  Density thresholds: [%.2f, %.2f] percentile\n",

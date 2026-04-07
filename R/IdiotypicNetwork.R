@@ -27,6 +27,14 @@
 #' idi$regulate(rep, "gaussian", list(alpha = 0.5))
 #' print(idi)
 #'
+#' @param theta_low Lower activation threshold.
+#' @param theta_high Upper activation threshold.
+#' @param source_rate Basal cell production rate.
+#' @param decay_rate Natural decay rate.
+#' @param dt Euler integration time step.
+#' @param timeSteps Number of dynamics simulation steps.
+#' @param survival_threshold Minimum population to survive.
+#'
 #' @importFrom R6 R6Class
 #' @export
 IdiotypicNetwork <- R6::R6Class(
@@ -144,6 +152,7 @@ IdiotypicNetwork <- R6::R6Class(
     },
 
     #' @description Print summary.
+    #' @param ... Not used.
     print = function(...) {
       cat("<IdiotypicNetwork>\n")
       cat(sprintf("  Activation window: [%.3f, %.3f]\n",

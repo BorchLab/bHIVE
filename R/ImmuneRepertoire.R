@@ -22,6 +22,9 @@
 #' rep$suppress(epsilon = 1.5, method = "euclidean")
 #' rep$size()  # fewer antibodies after suppression
 #'
+#' @param cells Numeric matrix (nAntibodies x nFeatures).
+#' @param metadata Optional data frame with columns: isotype, state, age, lineage.
+#'
 #' @importFrom R6 R6Class
 #' @export
 ImmuneRepertoire <- R6::R6Class(
@@ -161,6 +164,7 @@ ImmuneRepertoire <- R6::R6Class(
     as_matrix = function() self$cells,
 
     #' @description Print summary.
+    #' @param ... Not used.
     print = function(...) {
       cat(sprintf("<ImmuneRepertoire> %d antibodies x %d features\n",
                   self$size(), self$n_features()))

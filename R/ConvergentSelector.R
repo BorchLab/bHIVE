@@ -22,6 +22,10 @@
 #' public <- conv$from_results(results)
 #' nrow(public)  # consensus antibodies
 #'
+#' @param tolerance Numeric. Maximum distance for two antibodies to be
+#'   considered the same across repertoires.
+#' @param min_appearances Integer. Minimum repertoires for an antibody to be public.
+#'
 #' @importFrom R6 R6Class
 #' @export
 ConvergentSelector <- R6::R6Class(
@@ -107,6 +111,7 @@ ConvergentSelector <- R6::R6Class(
     },
 
     #' @description Print summary.
+    #' @param ... Not used.
     print = function(...) {
       cat("<ConvergentSelector>\n")
       cat(sprintf("  Tolerance: %.3f\n", self$tolerance))

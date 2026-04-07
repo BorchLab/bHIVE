@@ -25,6 +25,17 @@
 #' shm_airs     <- SHMEngine$new(method = "airs", temperature = 0.3)
 #' print(shm_adaptive)
 #'
+#' @param method Character. Mutation strategy.
+#' @param decay Numeric. Per-iteration mutation rate decay (uniform method).
+#' @param mutationMin Numeric. Minimum mutation rate floor.
+#' @param c_rate Numeric. Scaling constant (airs method).
+#' @param temperature Numeric. Temperature parameter (airs method).
+#' @param E_0 Numeric. Energy budget base (energy method).
+#' @param base_rate Numeric. Base mutation rate (hotspot, adaptive methods).
+#' @param beta1 Numeric. First moment decay (adaptive method, like Adam).
+#' @param beta2 Numeric. Second moment decay (adaptive method, like Adam).
+#' @param adam_epsilon Numeric. Numerical stability (adaptive method).
+#'
 #' @importFrom R6 R6Class
 #' @export
 SHMEngine <- R6::R6Class(
@@ -116,6 +127,7 @@ SHMEngine <- R6::R6Class(
     },
 
     #' @description Print summary.
+    #' @param ... Not used.
     print = function(...) {
       cat(sprintf("<SHMEngine> method='%s'\n", self$method))
       key_params <- switch(self$method,

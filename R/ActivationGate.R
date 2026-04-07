@@ -20,10 +20,16 @@
 #' data(iris)
 #' X <- as.matrix(iris[, 1:4])
 #' A <- X[sample(150, 10), ]
+#' rep <- ImmuneRepertoire$new(A)
 #' gate <- ActivationGate$new(signal2_type = "density", threshold2 = 0.3)
-#' aff <- compute_affinity_matrix(X, A, "gaussian")
+#' aff <- rep$affinity_matrix(X, "gaussian")
 #' activated <- gate$evaluate(aff, X, A)
 #' sum(activated)  # number of activated interactions
+#'
+#' @param signal2_type Character. "density", "danger", or "entropy".
+#' @param threshold1 Numeric. Minimum affinity threshold.
+#' @param threshold2 Numeric. Minimum Signal 2 threshold.
+#' @param danger_signals Numeric vector. Per-data-point danger scores.
 #'
 #' @importFrom R6 R6Class
 #' @export
@@ -118,6 +124,7 @@ ActivationGate <- R6::R6Class(
     },
 
     #' @description Print summary.
+    #' @param ... Not used.
     print = function(...) {
       cat(sprintf("<ActivationGate> signal2='%s'\n", self$signal2_type))
       cat(sprintf("  Threshold1 (affinity): %.3f\n", self$threshold1))

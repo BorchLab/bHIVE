@@ -26,6 +26,11 @@
 #' dim(A)  # 20 x 4
 #' print(vdj)
 #'
+#' @param nV Integer. Number of V gene alleles.
+#' @param nD Integer. Number of D gene alleles.
+#' @param nJ Integer. Number of J gene alleles.
+#' @param method Character. "pca", "cluster", or "random_partition".
+#'
 #' @importFrom R6 R6Class
 #' @importFrom stats prcomp kmeans
 #' @export
@@ -103,6 +108,7 @@ VDJLibrary <- R6::R6Class(
     },
 
     #' @description Print summary.
+    #' @param ... Not used.
     print = function(...) {
       cat(sprintf("<VDJLibrary> method='%s' V=%d D=%d J=%d\n",
                   self$method, self$nV, self$nD, self$nJ))

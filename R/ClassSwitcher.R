@@ -23,6 +23,10 @@
 #' alphas <- cs$switch_isotypes(rep, zones)
 #' table(rep$metadata$isotype)  # IgM, IgG, IgA distribution
 #'
+#' @param alpha_IgM Numeric. Kernel width for broad matching.
+#' @param alpha_IgG Numeric. Kernel width for specific matching.
+#' @param alpha_IgA Numeric. Kernel width for boundary matching.
+#'
 #' @importFrom R6 R6Class
 #' @export
 ClassSwitcher <- R6::R6Class(
@@ -94,6 +98,7 @@ ClassSwitcher <- R6::R6Class(
     },
 
     #' @description Print summary.
+    #' @param ... Not used.
     print = function(...) {
       cat("<ClassSwitcher>\n")
       cat(sprintf("  IgM (broad):    alpha = %.3f\n", self$alpha_IgM))

@@ -24,6 +24,10 @@
 #' gc$select(rep, X, iris$Species, "classification")
 #' rep$size()  # fewer antibodies after selection
 #'
+#' @param nTfh Integer. Number of Tfh helper cells. Each helps one B cell.
+#' @param selectionPressure Numeric [0,1]. Stringency of selection.
+#' @param rounds Integer. Number of competition rounds.
+#'
 #' @importFrom R6 R6Class
 #' @export
 GerminalCenter <- R6::R6Class(
@@ -93,6 +97,7 @@ GerminalCenter <- R6::R6Class(
     },
 
     #' @description Print summary.
+    #' @param ... Not used.
     print = function(...) {
       cat("<GerminalCenter>\n")
       cat(sprintf("  nTfh: %d\n", self$nTfh))

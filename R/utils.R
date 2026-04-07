@@ -8,6 +8,7 @@ utils::globalVariables(c("PC1", "PC2", "Group", "Feature", "Prototype", "Layer")
 #' @param x Value to test.
 #' @param y Default value if \code{x} is NULL.
 #' @return \code{x} if not NULL, otherwise \code{y}.
+#' @name null-coalesce
 #' @keywords internal
 `%||%` <- function(x, y) if (is.null(x)) y else x
 

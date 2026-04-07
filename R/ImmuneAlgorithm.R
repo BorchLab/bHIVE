@@ -2,6 +2,9 @@
 #' @description Abstract R6 base class for all immune-inspired algorithms.
 #' Subclasses must implement the \code{fit} method.
 #'
+#' @param config Named list of hyperparameters.
+#' @param modules Named list of module instances.
+#'
 #' @importFrom R6 R6Class
 #' @export
 ImmuneAlgorithm <- R6::R6Class(
@@ -86,6 +89,7 @@ ImmuneAlgorithm <- R6::R6Class(
     },
 
     #' @description Print summary of the algorithm.
+    #' @param ... Not used.
     print = function(...) {
       cat(sprintf("<%s>\n", class(self)[1]))
       if (!is.null(self$repertoire)) {

@@ -15,6 +15,10 @@
 #' recalled <- mp$recall(X[1:5, ])
 #' nrow(recalled)  # memories relevant to query
 #'
+#' @param archive_threshold Numeric. Minimum average affinity to archive.
+#' @param max_memory Integer. Maximum memory cells.
+#' @param recall_threshold Numeric. Minimum affinity to recall a memory.
+#'
 #' @importFrom R6 R6Class
 #' @export
 MemoryPool <- R6::R6Class(
@@ -132,6 +136,7 @@ MemoryPool <- R6::R6Class(
     },
 
     #' @description Print summary.
+    #' @param ... Not used.
     print = function(...) {
       cat(sprintf("<MemoryPool> %d cells (max %d)\n", self$size(), self$max_memory))
       cat(sprintf("  Archive threshold: %.3f\n", self$archive_threshold))
