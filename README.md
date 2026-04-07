@@ -8,127 +8,161 @@
 [![R-CMD-check](https://github.com/BorchLab/bHive/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/BorchLab/bHive/actions/workflows/R-CMD-check.yaml)
 [![Codecov test coverage](https://codecov.io/gh/BorchLab/bHive/graph/badge.svg)](https://app.codecov.io/gh/BorchLab/bHive)
 <!-- badges: end -->
-  
-### Introduction
 
-**bHIVE** is an R package implementing an Artificial Immune Network ([AI-Net](https://www.dca.fee.unicamp.br/~vonzuben/research/lnunes_dout/artigos/DMHA.PDF)) algorithm. 
-Inspired by principles of immunology, the bHIVE algorithm evolves a population of 
-"antibodies" to model and analyze datasets. It supports three tasks:
+### Overview
 
-- **Clustering**: Groups data points based on similarity.
-- **Classification**: Assigns labels to data points based on learned patterns.
-- **Regression**: Predicts continuous outcomes based on input features.
+**bHIVE** is an R package implementing a modular Artificial Immune System (AIS) framework for clustering, classification, and regression. Built on [AI-Net](https://www.dca.fee.unicamp.br/~vonzuben/research/lnunes_dout/artigos/DMHA.PDF) (de Castro & Von Zuben 2001), bHIVE extends the classical algorithm with biologically-grounded modules drawn from modern immunology: somatic hypermutation, idiotypic network regulation, germinal center selection, and microenvironment-driven adaptation.
 
-The AI-Net algorithm uses clonal selection and mutation, network suppression, 
-and affinity/distance metrics to iteratively refine the antibody population.
+Performance-critical operations (affinity/distance matrices, clonal selection, network suppression, mutation) are implemented in C++ via [RcppArmadillo](https://cran.r-project.org/package=RcppArmadillo), with parallelization support through [BiocParallel](https://bioconductor.org/packages/BiocParallel/).
 
-### Algorithm Basis
+### Key Features
 
-The algorithm operates in the following steps:
-
-1. **Affinity Calculation**: For a data point `x` and an antibody `a`, the affinity is defined as:
-
-   Affinity(x, a) = f(x, a; params)
-
-   where `f` is a similarity kernel such as Gaussian (RBF), Laplace, or cosine similarity.
-
-2. **Clonal Expansion and Mutation**: Top-matching antibodies are cloned and mutated:
-
-   a' = a + ε
-
-   where `ε` is sampled from a distribution scaled by affinity and iteration parameters.
-
-3. **Network Suppression**: Antibodies that are too similar (within a threshold `ε`) are suppressed to maintain diversity:
-
-   Distance(a_i, a_j) < ε ⇒ Suppress a_j
-
-4. **Assignment**: Data points are assigned to antibodies using affinity (for classification/regression) or distance (for clustering).
-
-<img align="center" src="https://github.com/BorchLab/bHive/blob/main/www/iterativeGraphic.png">
+- **Three tasks** -- clustering, classification, and regression on numeric matrices
+- **C++ backend** -- BLAS-optimized bulk affinity/distance computation
+- **Two APIs** -- functional (`bHIVE()`) for quick use and R6 (`AINet$new()`) for full module composition
+- **Multilayer architecture** -- `honeycombHIVE()` for hierarchical prototype refinement across layers
+- **Hyperparameter tuning** -- `swarmbHIVE()` with grid search and BiocParallel
+- **Gradient refinement** -- `refineB()` post-processing with 5 optimizers and 8 loss functions
+- **Composable immune modules** -- mix and match biological mechanisms via dependency injection
+- **caret compatible** -- `bHIVEmodel` and `honeycombHIVEmodel` for cross-validation workflows
 
 ## Installation
 
-To install the **bHIVE** from GitHub, use:
-
-```R
-# Install bHIVE from GitHub
+```r
 devtools::install_github("BorchLab/bHIVE")
 ```
 
-## Examples
+## Quick Start
 
-### Clustering
+### Functional API
 
-```
-# Load the Iris dataset
+The simplest way to use bHIVE. Works like any R modeling function:
+
+```r
+library(bHIVE)
 data(iris)
-X <- as.matrix(iris[, 1:4])  # Use numeric features only
+X <- as.matrix(iris[, 1:4])
 
-# Run bHIVE for clustering
-res <- bHIVE(X = X, 
-             task = "clustering", 
-             nAntibodies = 30, 
-             beta = 5, 
-             epsilon = 0.01, 
-             maxIter = 20, 
-             k = 3)
-
-# View clustering results
+# Clustering
+res <- bHIVE(X, task = "clustering", nAntibodies = 30, maxIter = 20)
 table(res$assignments)
+
+# Classification
+res <- bHIVE(X, y = iris$Species, task = "classification",
+             nAntibodies = 30, maxIter = 20)
+table(Predicted = res$assignments, Actual = iris$Species)
+
+# Regression
+res <- bHIVE(X[, 2:4], y = iris$Sepal.Length, task = "regression",
+             nAntibodies = 30, maxIter = 20)
+cor(res$predictions, iris$Sepal.Length)
 ```
 
-### Classification
+### R6 API with Modules
 
-```
-# Load the Iris dataset
-data(iris)
-X <- as.matrix(iris[, 1:4])  # Use numeric features
-y <- iris$Species           # Classification labels
+For full control, compose an `AINet` with any combination of immune modules:
 
-# Run bHIVE for classification
-res <- bHIVE(X = X, 
-             y = y, 
-             task = "classification", 
-             nAntibodies = 30, beta = 5, 
-             epsilon = 0.01, 
-             maxIter = 20, 
-             k = 3)
+```r
+# Adaptive mutation + idiotypic network regulation
+model <- AINet$new(
+  nAntibodies = 20,
+  maxIter = 30,
+  shm = SHMEngine$new(method = "adaptive", base_rate = 0.1),
+  idiotypic = IdiotypicNetwork$new(theta_low = 0.01, theta_high = 0.5),
+  verbose = FALSE
+)
+model$fit(X, iris$Species, task = "classification")
+table(model$result$assignments)
 
-# Compare predicted labels with actual labels
-table(Predicted = res$assignments, Actual = y)
-```
-
-### Regression
-
-```
-# Load the Iris dataset
-data(iris)
-X <- as.matrix(iris[, 2:4])  # Use other features as predictors
-y <- iris$Sepal.Length       # Regression target
-
-# Run bHIVE for regression
-res <- bHIVE(X = X, 
-             y = y, 
-             task = "regression",
-             nAntibodies = 30, 
-             beta = 5, 
-             epsilon = 0.01, 
-             maxIter = 20, 
-             k = 3)
-
-# Compare predicted values with actual values
-cor(res$assignments, y)
+# Predict on new data
+preds <- model$predict(X[1:10, ])
 ```
 
-## Bug Reports/New Features
+## Architecture
 
-#### If you run into any issues or bugs please submit a [GitHub issue](https://github.com/BorchLab/bHIVE/issues) with details of the issue.
+### Algorithm
 
-If possible please include a [reproducible example](https://reprex.tidyverse.org/). 
+bHIVE evolves a population of antibody vectors to represent structure in data:
 
-#### Any requests for new features or enhancements can also be submitted as [GitHub issues](https://github.com/BorchLab/bHIVE/issues).
+1. **Initialization** -- sample from data, random generation, kmeans++, or V(D)J combinatorial assembly
+2. **Affinity computation** -- bulk n x m matrix via BLAS (Gaussian, Laplace, polynomial, cosine, Hamming)
+3. **Clonal selection + mutation** -- top-k antibodies cloned; mutants generated via configurable SHM strategy
+4. **Network regulation** -- suppress redundant antibodies via distance threshold or idiotypic network dynamics
+5. **Final assignment** -- data points assigned to nearest antibody by affinity or distance
 
-### Contributing
+<img align="center" src="https://github.com/BorchLab/bHive/blob/main/www/iterativeGraphic.png">
+
+### Immune Modules
+
+Each module is an R6 class that can be injected into `AINet` via its constructor. All modules are optional -- use only what you need.
+
+| Module | Biological Basis | What It Does |
+|:-------|:-----------------|:-------------|
+| `SHMEngine` | Somatic hypermutation | 5 mutation strategies: uniform, airs, hotspot, energy, adaptive |
+| `IdiotypicNetwork` | Ab-Ab network regulation | Bell-shaped activation dynamics replacing epsilon-threshold suppression |
+| `GerminalCenter` | Tfh-B cell interaction | Task-aware quality selection with resource competition |
+| `Microenvironment` | Tissue microenvironment cues | Density-dependent zone classification and mutation rate modulation |
+| `VDJLibrary` | V(D)J recombination | Combinatorial gene library initialization (PCA, cluster, random partition) |
+| `ActivationGate` | Two-signal activation | Costimulatory filtering (density, danger signal, or label entropy) |
+| `MemoryPool` | Immunological memory | Archive high-affinity antibodies and recall on distribution shift |
+| `ClassSwitcher` | Isotype class switching | IgM (broad) / IgG (specific) / IgA (boundary) kernel width modulation |
+| `ConvergentSelector` | Public clonotypes | Cross-repertoire consensus for ensemble methods |
+
+### Multilayer & Tuning
+
+```r
+# honeycombHIVE: hierarchical prototype refinement
+res <- honeycombHIVE(X, y = iris$Species, task = "classification",
+                     layers = 3, nAntibodies = 30,
+                     refine = TRUE, refineOptimizer = "adam")
+
+# swarmbHIVE: hyperparameter grid search (parallelizable)
+grid <- expand.grid(nAntibodies = c(15, 30), beta = c(3, 5), epsilon = c(0.01, 0.1))
+best <- swarmbHIVE(X, y = iris$Species, task = "classification",
+                   grid = grid, metric = "accuracy", maxIter = 20)
+best$best_params
+```
+
+### Gradient Refinement
+
+Fine-tune antibody positions after training with `refineB()`:
+
+```r
+res <- bHIVE(X, y = iris$Species, task = "classification",
+             nAntibodies = 20, maxIter = 20)
+
+# Adam-based refinement with cross-entropy loss
+A_refined <- refineB(res$antibodies, X, y = iris$Species,
+                     assignments = res$assignments,
+                     task = "classification",
+                     loss = "categorical_crossentropy",
+                     optimizer = "adam", steps = 10, lr = 0.01)
+```
+
+## Affinity & Distance Functions
+
+| Affinity | Formula | Use Case |
+|:---------|:--------|:---------|
+| `gaussian` | exp(-alpha \|\|x - a\|\|^2) | General purpose (default) |
+| `laplace` | exp(-alpha \|\|x - a\|\|) | Heavier tails than Gaussian |
+| `polynomial` | (x . a + c)^p | Non-Euclidean similarity |
+| `cosine` | (x . a) / (\|\|x\|\| \|\|a\|\|) | Direction-based similarity |
+| `hamming` | 1 - (mismatches / d) | Categorical/binary features |
+
+| Distance | Notes |
+|:---------|:------|
+| `euclidean` | Default; L2 norm |
+| `manhattan` | L1 norm |
+| `minkowski` | Generalized Lp (parameter p) |
+| `cosine` | 1 - cosine similarity |
+| `mahalanobis` | Accounts for feature covariance (requires Sigma) |
+| `hamming` | Count of differing features |
+
+## Bug Reports / Feature Requests
+
+If you run into any issues or bugs please submit a [GitHub issue](https://github.com/BorchLab/bHIVE/issues) with details of the issue. If possible please include a [reproducible example](https://reprex.tidyverse.org/). Any requests for new features or enhancements can also be submitted as [GitHub issues](https://github.com/BorchLab/bHIVE/issues).
+
+## Contributing
 
 We welcome contributions to the bHIVE project! To contribute:
 
