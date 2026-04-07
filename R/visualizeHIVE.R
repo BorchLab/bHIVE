@@ -124,7 +124,7 @@ visualizeHIVE <- function(result,
     # Single-layer result: wrap it in a list for uniform processing.
     selectedLayers <- list(result)
     layer_labels <- "Layer 1"
-  } else if (is.list(result) && all(sapply(result, function(x) !is.null(x$antibodies)))) {
+  } else if (is.list(result) && all(vapply(result, function(x) !is.null(x$antibodies), logical(1)))) {
     # Multi-layer result.
     selectedLayers <- result[layer]
     layer_labels <- paste("Layer", layer)
@@ -140,16 +140,16 @@ visualizeHIVE <- function(result,
       protos <- as.data.frame(layer_i$antibodies)
       # If X has column names and the dimensions match, assign them to protos:
       if (!is.null(X) && ncol(protos) == ncol(X) && !is.null(colnames(X))) {
-        colnames(protos)[1:ncol(X)] <- colnames(X)
+        colnames(protos)[seq_len(ncol(X))] <- colnames(X)
       }
       protos$Layer <- layer_labels[i]
-      proto_grp <- sapply(seq_len(nrow(protos)), function(j) {
+      proto_grp <- vapply(seq_len(nrow(protos)), function(j) {
         dists <- apply(as.matrix(X), 1, function(x) {
           sqrt(sum((x - as.numeric(protos[j, seq_len(ncol(X))]))^2))
         })
         nearest_index <- which.min(dists)
-        return(layer_i$assignments[nearest_index])
-      })
+        return(as.character(layer_i$assignments[nearest_index]))
+      }, character(1))
       protos$Group <- factor(proto_grp, levels = unique(proto_grp))
       protos
     })

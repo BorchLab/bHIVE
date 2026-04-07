@@ -71,6 +71,21 @@
 #' Depending on the chosen \code{optimizer}, it may use plain SGD, momentum-based updates, Adagrad,
 #' Adam, or RMSProp.
 #'
+#' @examples
+#' data(iris)
+#' X <- as.matrix(iris[, 1:4])
+#' y <- iris$Species
+#' res <- bHIVE(X, y, task = "classification", nAntibodies = 10,
+#'              maxIter = 5, verbose = FALSE)
+#' assignments <- as.integer(factor(res$assignments,
+#'                                  levels = unique(res$assignments)))
+#' A_refined <- refineB(res$antibodies, X, y = y,
+#'                      assignments = assignments,
+#'                      task = "classification",
+#'                      loss = "mse", optimizer = "adam",
+#'                      steps = 3, lr = 0.01, verbose = FALSE)
+#' dim(A_refined)
+#'
 #' @export
 refineB <- function(A,
                     X,

@@ -28,9 +28,12 @@ navbar:
           href: articles/bHIVE.html
         - text: "---"
         - text: "Immune Modules"
-          href: articles/immune-modules.html
+          href: articles/articles/immune-modules.html
         - text: "Advanced Tuning & Workflows"
-          href: articles/advanced-workflows.html
+          href: articles/articles/advanced-workflows.html
+        - text: "---"
+        - text: "Algorithm & Biological Foundations"
+          href: articles/articles/foundations.html
     reference:
       text: Reference
       href: reference/index.html
@@ -109,8 +112,11 @@ articles:
       - bHIVE
   - title: "Tutorials"
     contents:
-      - immune-modules
-      - advanced-workflows
+      - articles/immune-modules
+      - articles/advanced-workflows
+  - title: "Reference"
+    contents:
+      - articles/foundations
 
 figures:
   dev: ragg::agg_png

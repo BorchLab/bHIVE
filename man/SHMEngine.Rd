@@ -19,8 +19,7 @@ The five strategies are:
   \item{energy}{Energy-budget-constrained mutation. Total mutation magnitude bounded
     by E = E_0 * (1-affinity)^2, inspired by Kleinstein's E_SHM ~ N_Mut^2 model.}
   \item{adaptive}{Per-feature adaptive mutation rate with moment tracking, directly
-    implementing the Reddy (2026) insight that SHM and Adam optimizer are the
-    same algorithm discovered independently by evolution and machine learning.}
+    implementing SHM as the Adam optimizer.}
 }
 }
 \examples{

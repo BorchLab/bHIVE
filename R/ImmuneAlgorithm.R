@@ -5,6 +5,11 @@
 #' @param config Named list of hyperparameters.
 #' @param modules Named list of module instances.
 #'
+#' @examples
+#' # ImmuneAlgorithm is abstract; use AINet for concrete instances
+#' algo <- ImmuneAlgorithm$new()
+#' print(algo)
+#'
 #' @importFrom R6 R6Class
 #' @export
 ImmuneAlgorithm <- R6::R6Class(

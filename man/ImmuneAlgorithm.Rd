@@ -7,6 +7,12 @@
 Abstract R6 base class for all immune-inspired algorithms.
 Subclasses must implement the \code{fit} method.
 }
+\examples{
+# ImmuneAlgorithm is abstract; use AINet for concrete instances
+algo <- ImmuneAlgorithm$new()
+print(algo)
+
+}
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
