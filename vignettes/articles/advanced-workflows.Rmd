@@ -8,15 +8,10 @@ date: "`r Sys.Date()`"
 output:
   BiocStyle::html_document:
     toc_float: true
-package: bHIVE
-vignette: >
-  %\VignetteIndexEntry{Advanced Tuning & Workflows}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, echo=FALSE, results="hide", message=FALSE}
-knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE, tidy = FALSE)
 library(bHIVE)
 library(ggplot2)
 library(viridis)
@@ -164,7 +159,6 @@ after each layer's bHIVE pass. This fine-tunes prototype positions
 before collapsing.
 
 ```{r honeycomb-refine}
-if (!requireNamespace("MASS", quietly = TRUE)) install.packages("MASS")
 library(MASS)
 data(Boston)
 X_bos <- as.matrix(Boston[, -14])

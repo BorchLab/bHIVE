@@ -8,15 +8,10 @@ date: "`r Sys.Date()`"
 output:
   BiocStyle::html_document:
     toc_float: true
-package: bHIVE
-vignette: >
-  %\VignetteIndexEntry{Composing Immune Modules}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, echo=FALSE, results="hide", message=FALSE}
-knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE, tidy = FALSE)
 library(bHIVE)
 library(ggplot2)
 library(viridis)
@@ -32,7 +27,7 @@ stage of the algorithm.
 
 Each module is an independent R6 class that encapsulates a single
 immunological mechanism. You create modules separately and pass them to
-`AINet$new()` -- mix and match any combination.
+`AINet$new()`, allowing you to mix and match any combination.
 
 ```{r module-overview, eval=FALSE}
 model <- AINet$new(
@@ -60,11 +55,7 @@ strategies are available, each grounded in a different aspect of SHM biology:
 | `"energy"` | E_SHM ~ N_Mut^2 budget constraint | When you want bounded total perturbation |
 | `"adaptive"` | Per-feature Adam-like moment tracking | Best for complex landscapes; most novel |
 
-The **adaptive** method is the most distinctive -- it implements the insight
-from Reddy (2026) that somatic hypermutation and the Adam optimizer are the
-same algorithm discovered independently by evolution and machine learning.
-Each feature dimension maintains running mean and variance of past
-gradients.
+The **adaptive** method is the most distinctive in which somatic hypermutation and the Adam optimizer function the same. Each feature dimension maintains running mean and variance of past gradients.
 
 ```{r shm-comparison, fig.width=8, fig.height=4}
 data(iris)
@@ -74,7 +65,9 @@ y <- iris$Species
 methods <- c("uniform", "airs", "adaptive")
 results <- lapply(methods, function(m) {
   shm <- SHMEngine$new(method = m)
-  model <- AINet$new(nAntibodies = 15, maxIter = 15, shm = shm,
+  model <- AINet$new(nAntibodies = 15, 
+                     maxIter = 15, 
+                     shm = shm,
                      verbose = FALSE)
   model$fit(X, y, task = "classification")
   data.frame(
@@ -107,8 +100,10 @@ model_std$fit(X, task = "clustering")
 model_idi <- AINet$new(
   nAntibodies = 25, maxIter = 15,
   idiotypic = IdiotypicNetwork$new(
-    theta_low = 0.01, theta_high = 0.5,
-    source_rate = 0.5, timeSteps = 20
+    theta_low = 0.01, 
+    theta_high = 0.5,
+    source_rate = 0.5, 
+    timeSteps = 20
   ),
   verbose = FALSE
 )
@@ -142,7 +137,8 @@ gc <- GerminalCenter$new(
 )
 
 model_gc <- AINet$new(
-  nAntibodies = 30, maxIter = 15,
+  nAntibodies = 30, 
+  maxIter = 15,
   germinalCenter = gc,
   verbose = FALSE
 )
@@ -179,13 +175,16 @@ table(env$zones)
 # V(D)J Gene Library Initialization
 
 Instead of random sampling, `VDJLibrary` generates antibodies by
-combinatorial assembly of gene segments -- mimicking V(D)J recombination.
+combinatorial assembly of gene segments, mimicking V(D)J recombination.
 The feature space is split into three segments (V, D, J), each discretized
 into alleles, and new antibodies are built by combining one allele from
 each segment.
 
 ```{r vdj-demo}
-vdj <- VDJLibrary$new(nV = 5, nD = 3, nJ = 3, method = "pca")
+vdj <- VDJLibrary$new(nV = 5, 
+                      nD = 3, 
+                      nJ = 3, 
+                      method = "pca")
 A <- vdj$generate(20, X)
 dim(A)  # 20 antibodies x 4 features
 print(vdj)
@@ -313,6 +312,8 @@ cat("Accuracy:", mean(model$result$assignments == as.character(y)), "\n")
 Not every module combination will improve every dataset. The modular design
 lets you experiment with different biological mechanisms and find the
 combination that works best for your data and task.
+
+# Session Information
 
 ```{r}
 sessionInfo()
