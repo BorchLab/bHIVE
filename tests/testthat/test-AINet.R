@@ -4,7 +4,6 @@ set.seed(42)
 data(iris)
 X <- as.matrix(iris[, 1:4])
 y_class <- iris$Species
-y_reg <- iris$Sepal.Length
 
 # ==== Construction / Validation ====
 
@@ -84,23 +83,6 @@ test_that("AINet infers classification when y is factor", {
   expect_equal(model$result$task, "classification")
 })
 
-# ==== Regression ====
-
-test_that("AINet fits regression task", {
-  model <- AINet$new(nAntibodies = 10, maxIter = 5, verbose = FALSE)
-  model$fit(X, y_reg, task = "regression")
-
-  expect_equal(model$result$task, "regression")
-  expect_true(is.numeric(model$result$predictions))
-  expect_equal(length(model$result$predictions), nrow(X))
-})
-
-test_that("AINet infers regression when y is numeric", {
-  model <- AINet$new(nAntibodies = 10, maxIter = 3, verbose = FALSE)
-  model$fit(X, y_reg)
-  expect_equal(model$result$task, "regression")
-})
-
 # ==== Prediction ====
 
 test_that("AINet predict works for clustering", {
@@ -116,14 +98,6 @@ test_that("AINet predict works for classification", {
   preds <- model$predict(X[1:10, ])
   expect_equal(length(preds), 10)
   expect_true(all(preds %in% levels(y_class)))
-})
-
-test_that("AINet predict works for regression", {
-  model <- AINet$new(nAntibodies = 10, maxIter = 5, verbose = FALSE)
-  model$fit(X, y_reg, task = "regression")
-  preds <- model$predict(X[1:10, ])
-  expect_equal(length(preds), 10)
-  expect_true(is.numeric(preds))
 })
 
 # ==== Initialization methods ====

@@ -33,14 +33,12 @@ hyperparameter tuning, cross-validation, and performance evaluation.
           (e.g. "sgd", "momentum", "adagrad", "adam", "rmsprop").
     \item \code{refineSteps}: Number of gradient update steps in refinement.
     \item \code{refineLR}: Learning rate for refinement.
-    \item \code{refineHuberDelta}: Delta parameter used if the "huber" loss is chosen.
   }
 }
 
 \section{Supported Tasks}{
 
   \itemize{
-    \item \code{"Regression"}: Predicts numeric target values.
     \item \code{"Classification"}: Assigns class labels to input observations.
     \item \code{"Clustering"}: Groups data points based on similarity
           (though typically \code{caret} is used for supervised tasks).
@@ -69,8 +67,7 @@ hyperparameter tuning, cross-validation, and performance evaluation.
       layers = c(1, 2),
       refineOptimizer = "adam",
       refineSteps = 5,
-      refineLR = 0.01,
-      refineHuberDelta = 1.0
+      refineLR = 0.01
     )
   )
   print(model)

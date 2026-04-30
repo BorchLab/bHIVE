@@ -41,15 +41,6 @@ test_that("GerminalCenter select works for classification", {
   expect_true(rep$size() > 0)
 })
 
-test_that("GerminalCenter select works for regression", {
-  A <- X[sample(150, 20), ]
-  rep <- ImmuneRepertoire$new(A)
-  gc <- GerminalCenter$new(nTfh = 5, selectionPressure = 0.5)
-  gc$select(rep, X, iris$Sepal.Length, "regression")
-  expect_true(rep$size() <= 20)
-  expect_true(rep$size() > 0)
-})
-
 test_that("GerminalCenter does nothing when repertoire <= nTfh", {
   A <- X[sample(150, 5), ]
   rep <- ImmuneRepertoire$new(A)

@@ -58,36 +58,6 @@ test_that("swarmbHIVE works for classification (accuracy)", {
   expect_equal(nrow(res$best_params), 1)
 })
 
-test_that("swarmbHIVE works for regression (rmse)", {
-  data(iris)
-  X <- as.matrix(iris[, 2:4])
-  y <- iris$Sepal.Length
-  
-  grid <- expand.grid(
-    nAntibodies = c(10, 20),
-    beta        = c(3, 5),
-    epsilon     = c(0.01, 0.05)
-  )
-  
-  # Tune hyperparameters
-  res <- swarmbHIVE(
-    X     = X, 
-    y     = y, 
-    task  = "regression",
-    grid  = grid, 
-    metric = "rmse",
-    maxIter = 10,
-    verbose = FALSE
-  )
-  
-  # Check results structure
-  expect_named(res, c("best_params", "results"))
-  expect_true(is.data.frame(res$results))
-  expect_equal(ncol(res$results), ncol(grid) + 1)
-  expect_true(is.data.frame(res$best_params))
-  expect_equal(nrow(res$best_params), 1)
-})
-
 test_that("swarmbHIVE throws an error for invalid metric", {
   data(iris)
   X <- as.matrix(iris[, 1:4])
@@ -185,60 +155,6 @@ test_that("swarmbHIVE works for classification (kappa)", {
   expect_named(res, c("best_params", "results"))
   expect_equal(nrow(res$best_params), 1)
   # Kappa can be negative in worst cases, but let's just check it doesn't break
-  expect_true(all(!is.na(res$results$metric_value)))
-})
-
-test_that("swarmbHIVE works for regression (mae)", {
-  data(iris)
-  X <- as.matrix(iris[, 2:4])
-  y <- iris$Sepal.Length
-  
-  grid <- expand.grid(
-    nAntibodies = 10,
-    beta        = 3,
-    epsilon     = 0.01
-  )
-  
-  res <- swarmbHIVE(
-    X      = X,
-    y      = y,
-    task   = "regression",
-    grid   = grid,
-    metric = "mae",
-    maxIter= 5,
-    verbose= FALSE
-  )
-  
-  expect_named(res, c("best_params", "results"))
-  expect_equal(nrow(res$best_params), 1)
-  # MAE >= 0
-  expect_true(all(res$results$metric_value >= 0))
-})
-
-test_that("swarmbHIVE works for regression (r2)", {
-  data(iris)
-  X <- as.matrix(iris[, 2:4])
-  y <- iris$Sepal.Length
-  
-  grid <- expand.grid(
-    nAntibodies = 10,
-    beta        = 3,
-    epsilon     = 0.01
-  )
-  
-  res <- swarmbHIVE(
-    X      = X,
-    y      = y,
-    task   = "regression",
-    grid   = grid,
-    metric = "r2",
-    maxIter= 5,
-    verbose= FALSE
-  )
-  
-  expect_named(res, c("best_params", "results"))
-  expect_equal(nrow(res$best_params), 1)
-  # R2 can be negative. Just ensure no NA
   expect_true(all(!is.na(res$results$metric_value)))
 })
 

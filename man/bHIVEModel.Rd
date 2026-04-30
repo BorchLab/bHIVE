@@ -5,32 +5,32 @@
 \alias{bHIVEmodel}
 \title{B-cell-based Hybrid Immune Virtual Evolution (bHIVE) for caret}
 \format{
-A list containing the components required for integration with 
+A list containing the components required for integration with
 the \code{caret} package.
 }
 \usage{
 bHIVEmodel
 }
 \description{
-A wrapper for integrating the B-cell Hybrid Immune Variant Engine 
-(bHIVE) algorithm with the \code{caret} package. Supports both classification 
-and regression tasks, providing compatibility with \code{caret::train()} 
+A wrapper for integrating the B-cell Hybrid Immune Variant Engine
+(bHIVE) algorithm with the \code{caret} package. Supports classification
+tasks, providing compatibility with \code{caret::train()}
 for model training and validation.
 }
 \details{
-The \code{bHIVEmodel} wrapper facilitates the use of bHIVE for classification 
-and regression. It defines the model label, parameter grid, fitting function, 
+The \code{bHIVEmodel} wrapper facilitates the use of bHIVE for classification.
+It defines the model label, parameter grid, fitting function,
 and prediction methods to conform to the \code{caret} model specification.
 }
 \section{Components}{
 
 \describe{
-  \item{\code{label}}{Character string. Identifies the model as 
+  \item{\code{label}}{Character string. Identifies the model as
   "B-cell-based Hybrid Immune Virtual Evolution".}
-  \item{\code{library}}{Character string. Specifies the R package containing 
+  \item{\code{library}}{Character string. Specifies the R package containing
   the bHIVE implementation. Default is "customPackage".}
-  \item{\code{type}}{Character vector. Specifies the supported tasks: 
-  "Classification" and "Regression".}
+  \item{\code{type}}{Character vector. Specifies the supported tasks:
+  "Classification".}
   \item{\code{parameters}}{A \code{data.frame} describing the tunable 
   parameters: 
   \itemize{
@@ -40,10 +40,10 @@ and prediction methods to conform to the \code{caret} model specification.
   }}
   \item{\code{grid}}{Function. Generates a grid of tuning parameters for 
   hyperparameter optimization.}
-  \item{\code{fit}}{Function. Trains the bHIVE model using specified 
+  \item{\code{fit}}{Function. Trains the bHIVE model using specified
   hyperparameters and task type.}
-  \item{\code{predict}}{Function. Generates predictions for new data 
-  (classification labels or regression values).}
+  \item{\code{predict}}{Function. Generates predictions for new data
+  (classification labels).}
   \item{\code{prob}}{Function. Calculates class probabilities for 
   classification tasks.}
 }
@@ -64,12 +64,11 @@ and prediction methods to conform to the \code{caret} model specification.
 \section{Functions}{
 
 \itemize{
-  \item \code{grid(x, y, len)}: Generates a grid of tuning parameters. 
+  \item \code{grid(x, y, len)}: Generates a grid of tuning parameters.
   Accepts:
     \itemize{
       \item \code{x}: Feature matrix or data frame.
-      \item \code{y}: Target vector (factor for classification, numeric for 
-      regression).
+      \item \code{y}: Factor target vector for classification.
       \item \code{len}: Number of grid points for each parameter.
     }
   \item \code{fit(x, y, wts, param, lev, last, classProbs, ...)}: Trains 

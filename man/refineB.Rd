@@ -2,7 +2,7 @@
 % Please edit documentation in R/refineB.R
 \name{refineB}
 \alias{refineB}
-\title{refineB: Gradient-based fine-tuning for bHIVE antibodies with multiple loss 
+\title{refineB: Gradient-based fine-tuning for bHIVE antibodies with multiple loss
 functions and optimizers}
 \usage{
 refineB(
@@ -10,13 +10,12 @@ refineB(
   X,
   y = NULL,
   assignments,
-  task = c("clustering", "classification", "regression"),
+  task = c("clustering", "classification"),
   loss = c("categorical_crossentropy", "binary_crossentropy", "kullback_leibler",
-    "cosine", "mse", "mae", "poisson", "huber"),
+    "cosine", "mae"),
   steps = 5,
   lr = 0.01,
   push_away = TRUE,
-  huber_delta = 1,
   verbose = TRUE,
   optimizer = c("sgd", "momentum", "adagrad", "adam", "rmsprop"),
   momentum_coef = 0.9,
@@ -31,15 +30,15 @@ refineB(
 
 \item{X}{Matrix or data frame (nSamples x d) of feature data.}
 
-\item{y}{Optional. Factor (classification), numeric (regression), or NULL (clustering).}
+\item{y}{Optional. Factor (classification) or NULL (clustering).}
 
 \item{assignments}{Integer or character vector (length = nSamples), specifying the antibody index
 (or label) each sample belongs to.}
 
-\item{task}{One of \code{c("clustering", "classification", "regression")}.}
+\item{task}{One of \code{c("clustering", "classification")}.}
 
 \item{loss}{One of \code{c("categorical_crossentropy", "binary_crossentropy",
-"kullback_leibler", "cosine", "mse", "mae", "poisson", "huber")}.}
+"kullback_leibler", "cosine", "mae")}.}
 
 \item{steps}{Integer. How many gradient steps to run.}
 
@@ -47,8 +46,6 @@ refineB(
 
 \item{push_away}{Logical (for classification). Whether to push prototypes away
 from differently-labeled samples.}
-
-\item{huber_delta}{Numeric. The delta threshold if using huber loss.}
 
 \item{verbose}{Logical. If \code{TRUE}, prints progress messages each iteration.}
 
@@ -69,16 +66,16 @@ gradient-based optimization approach.}
 Updated matrix \code{A} of shape (nAb x d).
 }
 \description{
-After running \code{bHIVE} (or within \code{honeycombHIVE}), you have a set of 
+After running \code{bHIVE} (or within \code{honeycombHIVE}), you have a set of
 final antibody positions (A) in feature space. This function refines those
-prototypes by iterating over the data points assigned to each antibody and 
+prototypes by iterating over the data points assigned to each antibody and
 applying gradient-based updates using a user-chosen loss function and optimizer.
 }
 \details{
 The user must provide:
 - A numeric matrix \code{A} of antibody/prototype positions (nAb x nFeatures).
 - A numeric matrix/data frame \code{X} of data (nSamples x nFeatures).
-- Optional \code{y} for classification/regression. If \code{task="clustering"},
+- Optional \code{y} for classification. If \code{task="clustering"},
   \code{y} can be NULL or ignored.
 - An integer or character vector \code{assignments} (length=nSamples) giving the
   antibody index (or label) to which each data point is assigned.
@@ -90,19 +87,11 @@ The user must provide:
   the antibody's dominant label; push away otherwise.
 - **"binary_crossentropy"**: Similar to categorical CE, but we interpret factor y
   as binary (two classes). Pull for same label, push for different label.
-- **"kullback_leibler"**: Very rough approach that treats “dominant label vs. others”
+- **"kullback_leibler"**: Very rough approach that treats "dominant label vs. others"
   as p and q distributions, pushing/pulling prototypes.
 - **"cosine"**: Interpreted as trying to maximize cosine similarity for same-label points
   and minimize for different-label points.
-
-### Regression (numeric y)
-- **"mse"**: Mean squared error approximation in feature space (pull prototypes
-  toward assigned points).
-- **"mae"**: Mean absolute error approach (sign-based pull).
-- **"poisson"**: Poisson deviance (toy approach that scales the gradient by
-  (pred - y)/pred if we stored a predicted rate; here we do a naive version).
-- **"huber"**: Combines L1 and L2 regions, uses a delta cutoff. We adapt it
-  to a naive per-point gradient in feature space.
+- **"mae"**: Sign-based pull/push.
 
 ## Available Optimizers
 - **"sgd"**: Basic stochastic gradient descent.
@@ -127,7 +116,7 @@ assignments <- as.integer(factor(res$assignments,
 A_refined <- refineB(res$antibodies, X, y = y,
                      assignments = assignments,
                      task = "classification",
-                     loss = "mse", optimizer = "adam",
+                     loss = "categorical_crossentropy", optimizer = "adam",
                      steps = 3, lr = 0.01, verbose = FALSE)
 dim(A_refined)
 

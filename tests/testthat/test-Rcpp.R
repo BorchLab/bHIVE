@@ -137,21 +137,17 @@ test_that("clonal_selection_iteration_cpp runs for classification", {
 test_that("final_assignment_cpp runs for clustering", {
   A <- X[sample(150, 10), ]
   fa <- final_assignment_cpp(X, A, "gaussian", "euclidean", 0L,
-                              1.0, 1.0, 2.0, matrix(0, 0, 0),
-                              numeric(0), 0.0)
+                              1.0, 1.0, 2.0, matrix(0, 0, 0))
   expect_true(!is.null(fa$assignments))
   expect_equal(length(fa$assignments), 150)
 })
 
-test_that("final_assignment_cpp runs for regression", {
+test_that("final_assignment_cpp runs for classification", {
   A <- X[sample(150, 10), ]
-  ab_values <- rnorm(10)
-  fa <- final_assignment_cpp(X, A, "gaussian", "euclidean", 2L,
-                              1.0, 1.0, 2.0, matrix(0, 0, 0),
-                              ab_values, mean(ab_values))
-  expect_true(!is.null(fa$predictions))
-  expect_equal(length(fa$predictions), 150)
-  expect_true(all(is.finite(fa$predictions)))
+  fa <- final_assignment_cpp(X, A, "gaussian", "euclidean", 1L,
+                              1.0, 1.0, 2.0, matrix(0, 0, 0))
+  expect_true(!is.null(fa$best_antibody_idx))
+  expect_equal(length(fa$best_antibody_idx), 150)
 })
 
 # ==== Idiotypic Dynamics ====

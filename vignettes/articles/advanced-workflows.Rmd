@@ -38,7 +38,6 @@ each combination using a task-specific metric.
 |:-----|:--------|:----------|
 | Clustering | `"silhouette"`, `"davies_bouldin"`, `"calinski_harabasz"` | Higher is better (except D-B) |
 | Classification | `"accuracy"`, `"balanced_accuracy"`, `"f1"`, `"kappa"` | Higher is better |
-| Regression | `"rmse"`, `"mae"`, `"r2"` | Lower is better (except R^2) |
 
 ## Clustering Tuning
 
@@ -159,25 +158,24 @@ after each layer's bHIVE pass. This fine-tunes prototype positions
 before collapsing.
 
 ```{r honeycomb-refine}
-library(MASS)
-data(Boston)
-X_bos <- as.matrix(Boston[, -14])
-y_bos <- Boston$medv
+data(iris)
+X_iris <- as.matrix(iris[, 1:4])
+y_iris <- iris$Species
 
 set.seed(42)
-res_plain <- honeycombHIVE(X = X_bos, y = y_bos, task = "regression",
-                           layers = 3, nAntibodies = 50, verbose = FALSE)
+res_plain <- honeycombHIVE(X = X_iris, y = y_iris, task = "classification",
+                           layers = 3, nAntibodies = 30, verbose = FALSE)
 
-res_refined <- honeycombHIVE(X = X_bos, y = y_bos, task = "regression",
-                             layers = 3, nAntibodies = 50,
+res_refined <- honeycombHIVE(X = X_iris, y = y_iris, task = "classification",
+                             layers = 3, nAntibodies = 30,
                              refine = TRUE, refineOptimizer = "adam",
-                             refineLoss = "mse", refineSteps = 5,
-                             refineLR = 0.01, verbose = FALSE)
+                             refineLoss = "categorical_crossentropy",
+                             refineSteps = 5, refineLR = 0.01, verbose = FALSE)
 
-cor_plain   <- cor(res_plain[[3]]$predictions, y_bos)
-cor_refined <- cor(res_refined[[3]]$predictions, y_bos)
-cat("Correlation (plain):  ", round(cor_plain, 3), "\n")
-cat("Correlation (refined):", round(cor_refined, 3), "\n")
+acc_plain   <- mean(res_plain[[3]]$predictions   == as.character(y_iris))
+acc_refined <- mean(res_refined[[3]]$predictions == as.character(y_iris))
+cat("Accuracy (plain):  ", round(acc_plain, 3), "\n")
+cat("Accuracy (refined):", round(acc_refined, 3), "\n")
 ```
 
 # Gradient Refinement with refineB
@@ -199,14 +197,11 @@ gradient-based optimization. It supports 5 optimizers and 8 loss functions.
 
 | Loss | Tasks | Description |
 |:-----|:------|:------------|
-| `"mse"` | All | Mean squared error |
-| `"mae"` | All | Mean absolute error |
+| `"mae"` | All | Mean absolute error (sign-based pull/push) |
 | `"categorical_crossentropy"` | Classification | Cross-entropy loss |
 | `"binary_crossentropy"` | Classification | Binary cross-entropy |
 | `"kullback_leibler"` | Classification | KL divergence |
 | `"cosine"` | Classification | Cosine distance loss |
-| `"poisson"` | Regression | Poisson deviance |
-| `"huber"` | Regression | Huber loss (robust to outliers) |
 
 ## Comparing Optimizers
 
@@ -291,16 +286,16 @@ bHIVE provides two caret-compatible model objects for use with `train()`:
 ```{r caret-basic, fig.width=7, fig.height=5}
 library(caret)
 
-data(Boston)
-X_bos <- as.matrix(Boston[, -14])
-y_bos <- Boston$medv
+data(iris)
+X_iris <- as.matrix(iris[, 1:4])
+y_iris <- iris$Species
 
 set.seed(42)
-idx <- sample(nrow(X_bos), nrow(X_bos) * 0.7)
-X_train <- X_bos[idx, ]
-X_test  <- X_bos[-idx, ]
-y_train <- y_bos[idx]
-y_test  <- y_bos[-idx]
+idx <- sample(nrow(X_iris), nrow(X_iris) * 0.7)
+X_train <- X_iris[idx, ]
+X_test  <- X_iris[-idx, ]
+y_train <- y_iris[idx]
+y_test  <- y_iris[-idx]
 
 ctrl <- trainControl(method = "cv", number = 3)
 
@@ -324,16 +319,9 @@ ggplot(model) +
 
 ## Prediction on Held-Out Data
 
-```{r caret-predict, fig.width=5, fig.height=4}
+```{r caret-predict}
 preds <- predict(model, newdata = X_test)
-
-ggplot(data.frame(Actual = y_test, Predicted = preds),
-       aes(x = Actual, y = Predicted)) +
-  geom_point(alpha = 0.6) +
-  geom_smooth(method = "lm", color = "steelblue", se = FALSE) +
-  labs(title = "caret bHIVE: Predicted vs Actual",
-       x = "Actual (medv)", y = "Predicted") +
-  theme_minimal()
+table(Predicted = preds, Actual = y_test)
 ```
 
 ## honeycombHIVE caret Model
@@ -351,10 +339,9 @@ model_hc <- train(
     beta        = 5,
     epsilon     = 0.05,
     layers      = c(2, 3),
-    refineOptimizer  = "adam",
-    refineSteps      = 5,
-    refineLR         = 0.01,
-    refineHuberDelta = 1.0
+    refineOptimizer = "adam",
+    refineSteps     = 5,
+    refineLR        = 0.01
   ),
   verbose = FALSE
 )
@@ -404,23 +391,6 @@ visualizeHIVE(result = res_cls, X = iris[, 1:4],
               plot_type = "violin", feature = "Petal.Length",
               title = "Petal Length by Predicted Class",
               layer = 1, task = "classification")
-```
-
-## Density Plot for Regression
-
-```{r viz-density, fig.width=7, fig.height=4}
-set.seed(42)
-X_scaled <- as.data.frame(scale(X))
-res_reg <- honeycombHIVE(X = X_scaled,
-                         y = as.numeric(iris$Sepal.Length),
-                         task = "regression", layers = 2,
-                         nAntibodies = 12, beta = 5,
-                         maxIter = 10, verbose = FALSE)
-
-visualizeHIVE(result = res_reg, X = X_scaled,
-              plot_type = "density", feature = "Petal.Width",
-              title = "Density: Petal Width",
-              layer = 2, task = "regression")
 ```
 
 # Combining Modules with honeycombHIVE

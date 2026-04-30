@@ -215,8 +215,6 @@ $d(\mathbf{a}_i, \mathbf{a}_j) < \epsilon$ for any $i < j$.
   distance
 - **Classification**: each antibody labeled by majority vote of its
   assigned data points; predictions via affinity-weighted nearest antibody
-- **Regression**: each antibody stores the mean target value of its
-  assigned points; predictions via affinity-weighted interpolation
 
 **Step 5: Convergence check.** Early stopping if the antibody population
 size has not changed by more than `stopTolerance` for
@@ -397,8 +395,6 @@ The `GerminalCenter` module implements this as resource competition:
    The scoring is task-aware:
    - **Classification**: $q_j$ = proportion of assigned data points whose
      label matches the antibody's majority label
-   - **Regression**: $q_j$ = $1 / (1 + \text{MSE}_j)$ where MSE is computed
-     over assigned data points
    - **Clustering**: $q_j$ = mean affinity to assigned data points (cohesion)
 
 2. Apply selection pressure $p \in [0, 1]$ to compute a survival threshold:

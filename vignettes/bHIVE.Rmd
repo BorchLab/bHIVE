@@ -26,14 +26,14 @@ library(caret)
 
 # Introduction
 
-The **bHIVE** package implements an Artificial Immune Network (AI-Net) algorithm for clustering, classification, and regression tasks. Inspired by biological immune systems, bHIVE uses principles like clonal selection, mutation, and suppression to analyze and model data. 
+The **bHIVE** package implements an Artificial Immune Network (AI-Net) algorithm for clustering and classification tasks. Inspired by biological immune systems, bHIVE uses principles like clonal selection, mutation, and suppression to analyze and model data.
 
 This vignette demonstrates how to:
-1. Perform clustering, classification, and regression using `bHIVE`.
+1. Perform clustering and classification using `bHIVE`.
 2. Tune hyperparameters using `swarmbHIVE`.
 3. Use the `caret` wrapper for easy integration with machine learning workflows.
 4. Use multilayered immune networks with `honeycombHIVE`
-4. Visualize results with `ggplot2`.
+5. Visualize results with `ggplot2`.
 
 ## Parameters for `bHIVE()`
 
@@ -42,8 +42,8 @@ The behavior of the `bHIVE` function can be fine-tuned using a range of hyperpar
 | **Parameter**         | **Description**                                                                                               |
 |------------------------|-------------------------------------------------------------------------------------------------------------|
 | `X`                   | A numeric matrix or data frame of input features (rows are observations, columns are features).              |
-| `y`                   | (Optional) Target vector for classification (factor) or regression (numeric). If `NULL`, clustering is performed. |
-| `task`                | Specifies the task: `"clustering"`, `"classification"`, or `"regression"`.                                   |
+| `y`                   | (Optional) Factor target vector for classification. If `NULL`, clustering is performed.                       |
+| `task`                | Specifies the task: `"clustering"` or `"classification"`.                                                     |
 | `nAntibodies`         | Number of initial antibodies in the population. Larger values increase diversity but add computational cost.  |
 | `beta`                | Clone multiplier. Determines how many clones are generated for top-matching antibodies.                      |
 | `epsilon`             | Suppression threshold. Antibodies closer than `epsilon` are considered redundant and removed.                |
@@ -169,40 +169,6 @@ Comparing predicted vs actual
 table(Predicted = res$assignments, Actual = y)
 ```
 
-## Regression
-
-**Regression** is a supervised learning task where the goal is to predict continuous numeric outcomes. In this example, we use the Boston housing dataset to predict the median home value (medv) using `bHIVE`.
-
-```{r tidy = FALSE}
-library(MASS)
-data(Boston)
-X <- as.matrix(Boston[, -14])
-y <- Boston$medv
-
-# Perform regression
-set.seed(42)
-res <- bHIVE(X = X, 
-             y = y, 
-             task = "regression", 
-             nAntibodies = 300, 
-             beta = 4, 
-             epsilon = 0.08, 
-             k = 5,
-             initMethod = "random",
-             verbose = FALSE)
-
-# Visualize regression results
-Boston$Predicted <- res$assignments
-ggplot(Boston, aes(x = y, y = Predicted)) +
-    geom_point() +
-    geom_smooth(method = "lm", color = "blue", se = FALSE) +
-    labs(title = "Regression Results with bHIVE", 
-         x = "Actual Values (medv)", 
-         y = "Predicted Values") +
-    theme_minimal()
-
-```
-
 ## Hyperparameter Tuning
 
 Tuning hyperparameters is crucial for optimizing the performance of machine learning algorithms. In this example, we perform hyperparameter tuning for clustering using `swarmbHIVE`.
@@ -245,11 +211,15 @@ Best parameters
 tuning_results$best_params
 ```
 
-## Using the `caret` wrapper 
+## Using the `caret` wrapper
 
-The `bHIVE` package provides a `caret` wrapper for seamless integration with the `caret` framework, allowing for easy cross-validation and hyperparameter tuning. Here, we demonstrate regression on the Boston housing dataset.
+The `bHIVE` package provides a `caret` wrapper for seamless integration with the `caret` framework, allowing for easy cross-validation and hyperparameter tuning. Here, we demonstrate classification on the iris dataset.
 
 ```{r message=FALSE, warning=FALSE, tidy=FALSE}
+data(iris)
+X <- as.matrix(iris[, 1:4])
+y <- iris$Species
+
 # Splitting Training and Validation Data Sets
 set.seed(42)
 sample.idx <- sample(nrow(X), nrow(X)*0.7)
@@ -273,8 +243,8 @@ model <- train(x = x_test,
 
 # Visualize caret results
 ggplot(model) +
-    labs(title = "Caret Tuning Results for bHIVE", 
-         x = "Hyperparameter Combination", 
+    labs(title = "Caret Tuning Results for bHIVE",
+         x = "Hyperparameter Combination",
          y = "Performance Metric") +
     scale_color_viridis(discrete = TRUE) +
     theme_minimal()
@@ -285,16 +255,8 @@ ggplot(model) +
 To use the best performing model from the above, we just using the ```predict()``` function with the separated validation data set (**X_val**).
 
 ```{r tidy = FALSE}
-df <- data.frame(y = y_val,
-                 Predicted = predict(model, newdata = x_val))
-
-ggplot(df, aes(x = y, y = Predicted)) +
-    geom_point() +
-    geom_smooth(method = "lm", color = "blue", se = FALSE) +
-    labs(title = "Regression Results with bHIVE", 
-         x = "Actual Values (medv)", 
-         y = "Predicted Values") +
-    theme_minimal()
+preds <- predict(model, newdata = x_val)
+table(Predicted = preds, Actual = y_val)
 ```
 
 ## honeycombHIVE: Multilayered bHIVES
@@ -347,7 +309,7 @@ for (i in seq_along(res)) {
 }
 ```
 
-Note: If you use `task = "classification"` or `task = "regression"`, honeycombHIVE will generate multi-layer predictions. You can compare each layer’s predictions against the true labels/outcomes to see if performance improves or if the data become too collapsed.
+Note: If you use `task = "classification"`, honeycombHIVE will generate multi-layer predictions. You can compare each layer's predictions against the true labels to see if performance improves or if the data become too collapsed.
 
 ## Gradient-based Refinement
 
@@ -471,52 +433,35 @@ ggplot() +
 ## Applying Refinement to honeycombHIVE
 
 ```{r tidy=FALSE}
-data(Boston)
-X <- as.matrix(Boston[, -14])
-y <- Boston$medv
+data(iris)
+X <- as.matrix(iris[, 1:4])
+y <- iris$Species
 
+res_class <- honeycombHIVE(X = X,
+                           y = y,
+                           layers = 3,
+                           task = "classification",
+                           nAntibodies = 30,
+                           beta = 5,
+                           epsilon = 0.01,
+                           verbose = FALSE)
 
-res_reg <- honeycombHIVE(X = X, 
-                         y = y, 
-                         layers = 3,
-                         task = "regression", 
-                         nAntibodies = 50, 
-                         beta = 5, 
-                         epsilon = 0.01,
-                         verbose = FALSE)
+res_class_refine <- honeycombHIVE(X = X,
+                                  y = y,
+                                  task = "classification",
+                                  layers = 3,
+                                  nAntibodies = 30,
+                                  beta = 5,
+                                  epsilon = 0.01,
+                                  refine = TRUE,
+                                  refineOptimizer = "adam",
+                                  refineLoss = "categorical_crossentropy",
+                                  refineSteps = 3,
+                                  refineLR = 0.01,
+                                  verbose = FALSE)
 
-res_reg_refine <- honeycombHIVE(X = X,
-                                y = y,
-                                task = "regression",
-                                layers = 3, 
-                                nAntibodies = 50, 
-                                beta = 5, 
-                                epsilon = 0.01,
-                                refine = TRUE, 
-                                refineOptimizer = "adam",
-                                refineLoss = "mse",        
-                                refineSteps = 3,           
-                                refineLR = 0.01,            
-                                verbose = FALSE)
-
-Boston$Predicted <- res_reg[[3]]$predictions
-Boston$Predicted_Refined <- res_reg_refine[[3]]$predictions
-
-ggplot(Boston, aes(x = y, y = Predicted)) +
-    geom_point() +
-    geom_smooth(method = "lm", color = "blue", se = FALSE) +
-    labs(title = "Regression Results with bHIVE", 
-         x = "Actual Values (medv)", 
-         y = "Predicted Values") +
-    theme_minimal()
-
-ggplot(Boston, aes(x = y, y = Predicted_Refined)) +
-    geom_point() +
-    geom_smooth(method = "lm", color = "blue", se = FALSE) +
-    labs(title = "Regression Results with bHIVE", 
-         x = "Actual Values (medv)", 
-         y = "Predicted Values") +
-    theme_minimal()
+table(Refined = res_class_refine[[3]]$predictions,
+      Actual  = y)
 ```
 
 # Visualizing Results with visualizeHIVE
@@ -581,39 +526,9 @@ visualizeHIVE(result = res_class,
 
 The violin plot shows the distribution of **Sepal.Width** for each predicted class. Discrete color scales ensure that class labels are clearly distinguished, and the black markers indicate the prototype (group summary) for each group.
 
-## Example 3: Density Plot for Regression Results
-
-For regression tasks the grouping is set to a constant so that all data points are in one group. This density plot displays the distribution of "Sepal.Width" in layer 1, with prototype values indicated by dashed vertical lines.
-
-```{r}
-set.seed(42)
-X_scaled <- as.data.frame(scale(X))
-
-res_reg <- honeycombHIVE(
-  X = X_scaled, 
-  y = as.numeric(iris$Sepal.Length), 
-  task = "regression", 
-  layers = 2, 
-  nAntibodies = 12, 
-  beta = 5, 
-  maxIter = 10, 
-  verbose = FALSE)
-
-visualizeHIVE(result = res_reg,
-              X = X_scaled,
-              plot_type = "density",
-              feature = "Sepal.Length",
-              title = "Density Plot: Sepal.Width",
-              layer = 2,
-              task = "regression")
-
-```
-
-Since this is a regression task, all observations are grouped together ("All"). The density plot shows the overall distribution of Sepal.Width, with the prototype positions marked by dashed lines. This helps visualize the central tendency of the prototypes relative to the overall data distribution.
-
 # Conclusions
 
-The `bHIVE` package is a versatile tool for clustering, classification, and regression tasks. Its integration with caret simplifies hyperparameter tuning and cross-validation, making it suitable for a variety of datasets and use cases. If you have any questions, comments, or suggestions, please visit the [GitHub repository](https://github.com/BorchLab/bHIVE).
+The `bHIVE` package is a versatile tool for clustering and classification tasks. Its integration with caret simplifies hyperparameter tuning and cross-validation, making it suitable for a variety of datasets and use cases. If you have any questions, comments, or suggestions, please visit the [GitHub repository](https://github.com/BorchLab/bHIVE).
 
 ```{r}
 sessionInfo()

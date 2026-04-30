@@ -1,30 +1,26 @@
 #' Tune Hyperparameters for bHIVE (Swarm/Grid Search)
 #'
-#' Performs hyperparameter tuning for the bHIVE algorithm over a grid of 
-#' hyperparameter values or an externally provided data frame of parameter 
+#' Performs hyperparameter tuning for the bHIVE algorithm over a grid of
+#' hyperparameter values or an externally provided data frame of parameter
 #' combinations. Evaluates each combination using different metrics:
 #'
 #' - **Classification**: "accuracy", "balanced_accuracy", "f1", "kappa"
-#' - **Regression**: "rmse", "mae", "r2"
-#' - **Clustering**: "silhouette", "davies_bouldin", or "calinski_harabasz" 
+#' - **Clustering**: "silhouette", "davies_bouldin", or "calinski_harabasz"
 #'
-#' **Note**: Some metrics require additional packages or assumptions 
+#' **Note**: Some metrics require additional packages or assumptions
 #' (e.g., multi-class classification for "f1" is calculated as a macro-average).
 #'
-#' @param X A numeric matrix or data frame of input features (rows = 
+#' @param X A numeric matrix or data frame of input features (rows =
 #' observations, columns = features).
-#' @param y Optional. A target vector: factor for classification, numeric for 
-#' regression. 
+#' @param y Optional. A factor target vector for classification.
 #'   If \code{NULL}, clustering is performed.
-#' @param task Character. One of \code{"clustering"}, \code{"classification"},
-#'  or \code{"regression"}.
-#' @param grid A data frame specifying the hyperparameter combinations. 
-#' Should have columns: \code{nAntibodies}, \code{beta}, \code{epsilon}. 
+#' @param task Character. One of \code{"clustering"} or \code{"classification"}.
+#' @param grid A data frame specifying the hyperparameter combinations.
+#' Should have columns: \code{nAntibodies}, \code{beta}, \code{epsilon}.
 #' (Optionally more if you want to pass other arguments to \code{bHIVE()}.)
 #' @param metric Character. Name of the evaluation metric. Options:
 #'   \itemize{
 #'     \item \strong{Classification}: "accuracy", "balanced_accuracy", "f1", "kappa"
-#'     \item \strong{Regression}: "rmse", "mae", "r2"
 #'     \item \strong{Clustering}: "silhouette", "davies_bouldin", "calinski_harabasz"
 #'   }
 #' @param maxIter Integer. Maximum iterations for each \code{bHIVE} run 
@@ -79,44 +75,38 @@
 #' @importFrom BiocParallel bplapply SerialParam MulticoreParam BatchtoolsParam SerialParam
 #' @importFrom clusterCrit intCriteria
 #' @export
-swarmbHIVE <- function(X, 
-                       y = NULL, 
-                       task = c("clustering","classification","regression"),
+swarmbHIVE <- function(X,
+                       y = NULL,
+                       task = c("clustering","classification"),
                        grid,
                        metric = NULL,
                        maxIter = 50,
                        BPPARAM = SerialParam(),
                        verbose = TRUE) {
   task <- match.arg(task)
-  
+
   #-------------------
   # 1) Validate input
   #-------------------
   .validate_bHIVE_input(X, y)  # existing check from your code
-  
+
   # If metric is not given, choose a default
   if (is.null(metric)) {
     metric <- switch(
       task,
       "clustering"     = "silhouette",
-      "classification" = "accuracy",
-      "regression"     = "rmse"
+      "classification" = "accuracy"
     )
   }
-  
+
   # Allowed metrics by task
   valid_class_metrics <- c("accuracy", "balanced_accuracy", "f1", "kappa")
-  valid_reg_metrics   <- c("rmse", "mae", "r2")
   valid_clust_metrics <- c("silhouette", "davies_bouldin", "calinski_harabasz")
-  
+
   # Check if the chosen metric is valid for the task
   if (task == "classification" && ! metric %in% valid_class_metrics) {
     stop(sprintf("Invalid metric '%s' for classification. Valid: %s",
                  metric, paste(valid_class_metrics, collapse=", ")))
-  }
-  if (task == "regression" && ! metric %in% valid_reg_metrics) {
-    stop(sprintf("Invalid metric '%s' for regression. Valid: %s",
-                 metric, paste(valid_reg_metrics, collapse=", ")))
   }
   if (task == "clustering" && ! metric %in% valid_clust_metrics) {
     stop(sprintf("Invalid metric '%s' for clustering. Valid: %s",
@@ -191,26 +181,6 @@ swarmbHIVE <- function(X,
       }
     }
     
-    if (task == "regression") {
-      predicted_values <- model$predictions
-      actual_values <- y
-      
-      if (length(predicted_values) != length(actual_values)) {
-        warning("Length mismatch in predicted vs. actual for regression.")
-        return(NA_real_)
-      }
-      
-      if (metric == "rmse") {
-        return(sqrt(mean((predicted_values - actual_values)^2, na.rm=TRUE)))
-      } else if (metric == "mae") {
-        return(mean(abs(predicted_values - actual_values), na.rm=TRUE))
-      } else if (metric == "r2") {
-        ss_res <- sum((actual_values - predicted_values)^2, na.rm=TRUE)
-        ss_tot <- sum((actual_values - mean(actual_values, na.rm=TRUE))^2, na.rm=TRUE)
-        return(1 - ss_res/ss_tot)
-      }
-    }
-    
     # fallback
     return(NA_real_)
   }
@@ -268,14 +238,7 @@ swarmbHIVE <- function(X,
   #-----------------------------
   # 5) Identify Best Parameters
   #-----------------------------
-  if (task == "regression") {
-    # For regression metrics, smaller is better (rmse, mae) except R2 is bigger=better
-    if (metric %in% c("rmse","mae")) {
-      best_idx <- which.min(results_df$metric_value)
-    } else if (metric == "r2") {
-      best_idx <- which.max(results_df$metric_value)
-    }
-  } else if (task == "classification") {
+  if (task == "classification") {
     # All classification metrics: bigger is better
     best_idx <- which.max(results_df$metric_value)
   } else {

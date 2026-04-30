@@ -46,46 +46,30 @@ test_that("bHIVE works with different tasks", {
   data(iris)
   X <- as.matrix(iris[, 1:4])
   y_class <- iris$Species
-  y_reg <- iris$Sepal.Length
-  
+
   # Classification
   expect_silent(
-    res_class <- bHIVE(X = X, 
-                       y = y_class, 
-                       task = "classification", 
-                       affinityFunc = "gaussian", 
-                       distFunc = "euclidean", 
-                       nAntibodies = 10, 
+    res_class <- bHIVE(X = X,
+                       y = y_class,
+                       task = "classification",
+                       affinityFunc = "gaussian",
+                       distFunc = "euclidean",
+                       nAntibodies = 10,
                        maxIter = 5,
                        verbose = FALSE)
   )
   expect_type(res_class, "list")
   expect_named(res_class, c("antibodies", "assignments", "task"))
   expect_equal(length(res_class$assignments), nrow(X))
-  
-  # Regression
-  expect_silent(
-    res_reg <- bHIVE(X = X, 
-                     y = y_reg, 
-                     task = "regression", 
-                     affinityFunc = "gaussian", 
-                     distFunc = "euclidean", 
-                     nAntibodies = 10, 
-                     maxIter = 5, 
-                     verbose = FALSE)
-  )
-  expect_type(res_reg, "list")
-  expect_named(res_reg, c("antibodies", "assignments", "predictions", "task"))
-  expect_equal(length(res_reg$assignments), nrow(X))
-  
+
   # Clustering
   expect_silent(
-    res_cluster <- bHIVE(X = X, 
-                         task = "clustering", 
-                         affinityFunc = "gaussian", 
-                         distFunc = "euclidean", 
-                         nAntibodies = 10, 
-                         maxIter = 5, 
+    res_cluster <- bHIVE(X = X,
+                         task = "clustering",
+                         affinityFunc = "gaussian",
+                         distFunc = "euclidean",
+                         nAntibodies = 10,
+                         maxIter = 5,
                          verbose = FALSE)
   )
   expect_type(res_cluster, "list")

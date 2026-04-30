@@ -73,9 +73,9 @@ Fit the algorithm to data. Must be overridden by subclasses.
 \describe{
 \item{\code{X}}{Numeric matrix (n x d).}
 
-\item{\code{y}}{Optional target vector (factor or numeric).}
+\item{\code{y}}{Optional factor target for classification.}
 
-\item{\code{task}}{Character: "clustering", "classification", or "regression".}
+\item{\code{task}}{Character: "clustering" or "classification".}
 
 \item{\code{...}}{Additional arguments.}
 }

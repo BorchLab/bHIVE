@@ -43,8 +43,8 @@ ImmuneAlgorithm <- R6::R6Class(
 
     #' @description Fit the algorithm to data. Must be overridden by subclasses.
     #' @param X Numeric matrix (n x d).
-    #' @param y Optional target vector (factor or numeric).
-    #' @param task Character: "clustering", "classification", or "regression".
+    #' @param y Optional factor target for classification.
+    #' @param task Character: "clustering" or "classification".
     #' @param ... Additional arguments.
     #' @return The algorithm object (invisibly), with \code{result} populated.
     fit = function(X, y = NULL, task = NULL, ...) {
@@ -77,19 +77,15 @@ ImmuneAlgorithm <- R6::R6Class(
         newdata, A,
         cfg$affinityFunc %||% "gaussian",
         cfg$distFunc %||% "euclidean",
-        switch(task, clustering = 0L, classification = 1L, regression = 2L),
-        alpha, c_p, p_p, Sigma_inv,
-        self$result$antibody_values %||% numeric(0),
-        self$result$overall_mean %||% 0.0
+        switch(task, clustering = 0L, classification = 1L),
+        alpha, c_p, p_p, Sigma_inv
       )
 
       if (task == "clustering") {
         return(fa$assignments)
-      } else if (task == "classification") {
+      } else {
         classes <- self$result$antibody_classes
         return(classes[fa$best_antibody_idx])
-      } else {
-        return(fa$predictions)
       }
     },
 
