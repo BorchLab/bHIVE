@@ -9,8 +9,8 @@ template:
 home:
   title: bHIVE - B-cell Hybrid Immune Variant Engine
   description: >
-    Modular Artificial Immune System framework for clustering, classification,
-    and regression in R. C++ backend via RcppArmadillo with composable
+    Modular Artificial Immune System framework for clustering and
+    classification in R. C++ backend via RcppArmadillo with composable
     biologically-inspired modules.
 
 navbar:

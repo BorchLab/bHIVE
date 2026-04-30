@@ -1,24 +1,23 @@
 #' honeycombHIVE: Multilayer AIS with optional gradient-based fine-tuning
-#' 
-#' The \code{honeycombHIVE} function implements a multilayer artificial immune 
-#' system that iteratively refines a set of prototypes - referred to as 
-#' antibodies - to model the structure of the input data. In each layer, the 
-#' function first uses the \code{\link{bHIVE}} algorithm to generate or update 
-#' antibodies based on the current data representation and task (clustering, 
-#' classification, or regression). Optionally, it applies gradient-based 
-#' fine-tuning (via \code{\link{refineB}}) to these antibodies, allowing for 
-#' advanced refinement through various optimizers (e.g., SGD, Adam, RMSProp) and 
-#' customizable loss functions. The final output is a hierarchical set of layers 
-#' that encapsulate both the refined prototypes and the corresponding cluster 
-#' assignments or predictions for the original observations, making 
-#' \code{honeycombHIVE} a versatile tool for adaptive learning and pattern 
+#'
+#' The \code{honeycombHIVE} function implements a multilayer artificial immune
+#' system that iteratively refines a set of prototypes - referred to as
+#' antibodies - to model the structure of the input data. In each layer, the
+#' function first uses the \code{\link{bHIVE}} algorithm to generate or update
+#' antibodies based on the current data representation and task (clustering or
+#' classification). Optionally, it applies gradient-based
+#' fine-tuning (via \code{\link{refineB}}) to these antibodies, allowing for
+#' advanced refinement through various optimizers (e.g., SGD, Adam, RMSProp) and
+#' customizable loss functions. The final output is a hierarchical set of layers
+#' that encapsulate both the refined prototypes and the corresponding cluster
+#' assignments or predictions for the original observations, making
+#' \code{honeycombHIVE} a versatile tool for adaptive learning and pattern
 #' recognition.
-#' 
-#' @param X A numeric matrix or data frame of input features 
+#'
+#' @param X A numeric matrix or data frame of input features
 #' (rows = observations, columns = features).
-#' @param y Optional target vector (factor for classification, numeric 
-#' for regression).
-#' @param task Character, one of "clustering", "classification", or "regression".
+#' @param y Optional target factor vector for classification.
+#' @param task Character, one of "clustering" or "classification".
 #' @param layers Integer, how many layers (AIS iterations) to run.
 #' @param nAntibodies Integer, how many antibodies (prototypes) to generate 
 #' initially in each layer.
@@ -34,14 +33,13 @@
 #' @param verbose Logical, if TRUE prints progress at each layer.
 #' @param refine Logical, if TRUE apply gradient-based refinement via 
 #' \code{refineB()} to each layer's prototypes.
-#' @param refineLoss Character specifying the loss for \code{refineB()} 
-#' (e.g. "mse", "mae", etc.).
+#' @param refineLoss Character specifying the loss for \code{refineB()}
+#' (e.g. "categorical_crossentropy", "mae").
 #' @param refineSteps Integer, number of gradient steps in \code{refineB()}.
 #' @param refineLR Numeric, learning rate for gradient updates.
-#' @param refinePushAway Logical, if TRUE and classification, push prototypes 
+#' @param refinePushAway Logical, if TRUE and classification, push prototypes
 #' away from differently labeled points.
-#' @param refineHuberDelta Numeric, delta parameter if using the "huber" loss.
-#' @param refineOptimizer Character, one of \code{"sgd", "momentum", "adagrad", 
+#' @param refineOptimizer Character, one of \code{"sgd", "momentum", "adagrad",
 #' "adam", "rmsprop"} to be passed to \code{refineB()}.
 #' @param refineMomentumCoef Numeric, momentum coefficient (if using momentum).
 #' @param refineBeta1 Numeric, first moment decay rate (if using Adam).
@@ -53,7 +51,7 @@
 #' @param ... Additional arguments passed to \code{bHIVE}.
 #'
 #' @examples
-#' # Example 1: Clustering
+#' # Clustering
 #' data(iris)
 #' X_iris <- iris[, 1:4]
 #' resC <- honeycombHIVE(
@@ -65,27 +63,15 @@
 #'   maxIter = 10
 #' )
 #'
-#' # Example 2: Regression
-#' set.seed(42)
-#' X_reg <- matrix(rnorm(100*4), ncol = 4)
-#' y_reg <- rowSums(X_reg[, 1:2]) + rnorm(100)
-#' resReg <- honeycombHIVE(
-#'   X = X_reg,
-#'   y = y_reg,
-#'   task = "regression",
-#'   layers = 3,
-#'   nAntibodies = 10
-#' )
-#' 
 #' @return A list of length \code{layers}. Each element (layer) includes:
 #'   \itemize{
 #'     \item \code{antibodies}: The prototypes in that layer.
-#'     \item \code{assignments}: Antibody index (in that layer) for each row 
+#'     \item \code{assignments}: Antibody index (in that layer) for each row
 #'     of \code{current_X}.
-#'     \item \code{membership}: For each \strong{original} row in \code{X}, 
+#'     \item \code{membership}: For each \strong{original} row in \code{X},
 #'     which cluster/antibody it belongs to in this layer.
-#'     \item \code{predictions}: If classification/regression, predicted label 
-#'     or numeric value for each original row in \code{X}.
+#'     \item \code{predictions}: If classification, predicted label for each
+#'     original row in \code{X}.
 #'     \item \code{task}: The specified task.
 #'   }
 #'
@@ -93,7 +79,7 @@
 #' @export
 honeycombHIVE <- function(X,
                           y = NULL,
-                          task = c("clustering", "classification", "regression"),
+                          task = c("clustering", "classification"),
                           layers = 3,
                           nAntibodies = 20,
                           minAntibodies = 5,
@@ -105,11 +91,10 @@ honeycombHIVE <- function(X,
                           distance = "euclidean",
                           verbose = TRUE,
                           refine = FALSE,
-                          refineLoss = "mse",
+                          refineLoss = "categorical_crossentropy",
                           refineSteps = 5,
                           refineLR = 0.01,
                           refinePushAway = TRUE,
-                          refineHuberDelta = 1.0,
                           refineOptimizer = "sgd",
                           refineMomentumCoef = 0.9,
                           refineBeta1 = 0.9,
@@ -117,24 +102,25 @@ honeycombHIVE <- function(X,
                           refineRmspropDecay = 0.9,
                           refineEpsilon = 1e-8,
                           ...) {
-  
+
   # =======================
   # 0) Basic Checks & Setup
   # =======================
   task <- match.arg(task)
   collapseMethod <- match.arg(collapseMethod)
-  
-  .validate_bHIVE_input(X, y)  
-  
+
+  .validate_bHIVE_input(X, y)
+
   # Validate refineLoss based on task
   valid_losses <- list(
-    regression = c("mse", "mae", "huber", "kullback_leibler"),
-    classification = c("categorical_crossentropy", "binary_crossentropy", "kullback_leibler"),
-    clustering = c("mse", "mae", "huber")
+    classification = c("categorical_crossentropy", "binary_crossentropy",
+                       "kullback_leibler", "cosine", "mae"),
+    clustering = c("categorical_crossentropy", "binary_crossentropy",
+                   "kullback_leibler", "cosine", "mae")
   )
-  
+
   if (refine && !refineLoss %in% valid_losses[[task]]) {
-    stop(sprintf("Invalid refineLoss '%s' for task '%s'. Supported losses: %s", 
+    stop(sprintf("Invalid refineLoss '%s' for task '%s'. Supported losses: %s",
                  refineLoss, task, paste(valid_losses[[task]], collapse = ", ")))
   }
   
@@ -201,18 +187,17 @@ honeycombHIVE <- function(X,
       assignments_layer <- res_layer$assignments
       
       if (task == "clustering") {
-        dummy_y <- rep(1, n_current)
+        dummy_y <- factor(rep("c", n_current))
         refined_A <- refineB(
           A           = res_layer$antibodies,
           X           = current_X,
           y           = dummy_y,
           assignments = assignments_layer,
           loss        = refineLoss,
-          task        = "classification",  
+          task        = "classification",
           steps       = refineSteps,
           lr          = refineLR,
           push_away   = FALSE,
-          huber_delta = refineHuberDelta,
           verbose     = verbose,
           optimizer   = refineOptimizer,
           momentum_coef = refineMomentumCoef,
@@ -231,8 +216,7 @@ honeycombHIVE <- function(X,
           task        = task,
           steps       = refineSteps,
           lr          = refineLR,
-          push_away   = (task == "classification" && refinePushAway),
-          huber_delta = refineHuberDelta,
+          push_away   = refinePushAway,
           verbose     = verbose,
           optimizer   = refineOptimizer,
           momentum_coef = refineMomentumCoef,
@@ -250,12 +234,12 @@ honeycombHIVE <- function(X,
     # ================
     cluster_ids <- res_layer$assignments  # Cluster indices from bHIVE
     unique_clusters <- unique(cluster_ids)
-    
+
     # Initialize membership for each original row.
     membership <- rep(NA_integer_, n_original)
-    
-    # For classification/regression, prepare a vector for predictions.
-    predictions_all_original <- if (task %in% c("classification", "regression")) rep(NA, n_original) else NULL
+
+    # For classification, prepare a vector for predictions.
+    predictions_all_original <- if (task == "classification") rep(NA, n_original) else NULL
     
     # Pre-allocate lists for new prototypes and updated row indices.
     proto_list <- vector("list", length(unique_clusters))
@@ -298,16 +282,7 @@ honeycombHIVE <- function(X,
         )
       }
       
-      # For regression, compute the prediction from current_y.
-      if (task == "regression" && !is.null(current_y)) {
-        # Use match() to obtain numeric indices from current_X's rownames.
-        indices_in_current <- match(rn_in_cluster, rownames(current_X))
-        val_pred <- mean(current_y[indices_in_current], na.rm = TRUE)
-        if (is.na(val_pred)) {
-          val_pred <- mean(y, na.rm = TRUE)  # fallback using original y
-        }
-        predictions_all_original[orig_indices] <- val_pred
-      } else if (task == "classification" && !is.null(current_y)) {
+      if (task == "classification" && !is.null(current_y)) {
         y_vals <- current_y[rn_in_cluster]
         tb <- table(y_vals)
         class_pred <- names(tb)[which.max(tb)]
@@ -346,7 +321,7 @@ honeycombHIVE <- function(X,
     new_data <- as.data.frame(proto_matrix)
     
     # Save predictions and membership for this layer.
-    if (task %in% c("classification", "regression")) {
+    if (task == "classification") {
       res_layer$predictions <- predictions_all_original
     } else {
       res_layer$predictions <- NULL
@@ -389,15 +364,6 @@ honeycombHIVE <- function(X,
         new_y[ii] <- names(tbl_ii)[which.max(tbl_ii)]
       }
       current_y <- factor(new_y, levels = levels(y))
-    } else if (task == "regression" && !is.null(current_y)) {
-      n_new <- nrow(current_X)
-      new_y <- numeric(n_new)
-      rn_protos <- rownames(current_X)
-      for (ii in seq_len(n_new)) {
-        orig_ids <- rowIndices[[rn_protos[ii]]]
-        new_y[ii] <- mean(y[orig_ids], na.rm = TRUE)
-      }
-      current_y <- new_y
     }
   }
   return(results)

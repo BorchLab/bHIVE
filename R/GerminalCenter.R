@@ -62,8 +62,8 @@ GerminalCenter <- R6::R6Class(
     #' @description Run germinal center selection on a repertoire.
     #' @param repertoire An \code{\link{ImmuneRepertoire}} object.
     #' @param X Numeric matrix of training data.
-    #' @param y Target vector (factor or numeric) or NULL for clustering.
-    #' @param task Character: "clustering", "classification", or "regression".
+    #' @param y Factor target vector or NULL for clustering.
+    #' @param task Character: "clustering" or "classification".
     #' @param affinityFunc Character. Affinity function for evaluation.
     #' @param affinityParams List. Parameters for affinity function.
     #' @return Invisible self. Repertoire modified in place.
@@ -130,8 +130,8 @@ GerminalCenter <- R6::R6Class(
           scores[j] <- if (length(assigned) > 0) mean(aff[assigned, j]) else 0
         }
 
-      } else if (task == "classification") {
-        # Quality = classification accuracy of assigned points
+      } else {
+        # Classification: quality = classification accuracy of assigned points
         assignments <- apply(aff, 1, which.max)
         scores <- numeric(m)
         # Each antibody gets the most common class label
@@ -143,20 +143,6 @@ GerminalCenter <- R6::R6Class(
             scores[j] <- max(table(labels)) / length(labels)
           }
         }
-
-      } else {
-        # Regression: quality = negative MSE
-        assignments <- apply(aff, 1, which.max)
-        scores <- numeric(m)
-        for (j in seq_len(m)) {
-          assigned <- which(assignments == j)
-          if (length(assigned) > 0) {
-            pred <- mean(y[assigned])
-            scores[j] <- -mean((y[assigned] - pred)^2)
-          }
-        }
-        # Shift to positive for probability weighting
-        scores <- scores - min(scores) + 1e-10
       }
 
       scores

@@ -74,31 +74,6 @@ test_that("refineB: Basic clustering functionality", {
   expect_equal(dim(result), dim(A))
 })
 
-test_that("refineB: Regression task validation", {
-  A <- matrix(runif(10), nrow = 2, ncol = 5)
-  X <- matrix(runif(20), nrow = 4, ncol = 5)
-  y <- c(1.5, 2.3, 1.8, 2.1)  # Numeric y for regression
-  assignments <- c(1, 2, 1, 2)
-  
-  # Valid regression task
-  expect_silent(refineB(A = A, 
-                        X = X, 
-                        y = y, 
-                        assignments = assignments, 
-                        task = "regression", 
-                        verbose = FALSE))
-  
-  # Invalid y for regression (non-numeric)
-  y_invalid <- factor(c("A", "B", "A", "B"))
-  expect_error(refineB(A = A, 
-                       X = X, 
-                       y = y_invalid, 
-                       assignments = assignments, 
-                       task = "regression",
-                       verbose = FALSE),
-               "y must be numeric for regression.")
-})
-
 test_that("refineB: Edge case - Empty antibody assignment", {
   A <- matrix(runif(10), nrow = 2, ncol = 5)
   X <- matrix(runif(20), nrow = 4, ncol = 5)
@@ -174,20 +149,18 @@ test_that("refineB: Optimizer variants and hyperparameter customization (classif
   expect_equal(dim(result_rmsprop), dim(A))
 })
 
-test_that("refineB: Optimizer variants for regression", {
+test_that("refineB: Optimizer variants for clustering", {
   A <- matrix(runif(10), nrow = 2, ncol = 5)
   X <- matrix(runif(20), nrow = 4, ncol = 5)
-  y <- c(1.5, 2.3, 1.8, 2.1)
   assignments <- c(1, 2, 1, 2)
-  
+
   optimizers <- c("sgd", "momentum", "adagrad", "adam", "rmsprop")
   for (opt in optimizers) {
-    result <- refineB(A = A, 
-                      X = X, 
-                      y = y, 
-                      assignments = assignments, 
-                      task = "regression", 
-                      optimizer = opt, 
+    result <- refineB(A = A,
+                      X = X,
+                      assignments = assignments,
+                      task = "clustering",
+                      optimizer = opt,
                       verbose = FALSE)
     expect_equal(dim(result), dim(A))
   }

@@ -142,9 +142,9 @@ Fit the AINet algorithm to data.
 \describe{
 \item{\code{X}}{Numeric matrix or data frame (n x d).}
 
-\item{\code{y}}{Optional target: factor (classification) or numeric (regression).}
+\item{\code{y}}{Optional factor target for classification.}
 
-\item{\code{task}}{Character: "clustering", "classification", or "regression".
+\item{\code{task}}{Character: "clustering" or "classification".
 Inferred from y if NULL.}
 
 \item{\code{...}}{Additional arguments (currently unused).}

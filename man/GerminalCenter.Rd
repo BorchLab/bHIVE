@@ -95,9 +95,9 @@ Run germinal center selection on a repertoire.
 
 \item{\code{X}}{Numeric matrix of training data.}
 
-\item{\code{y}}{Target vector (factor or numeric) or NULL for clustering.}
+\item{\code{y}}{Factor target vector or NULL for clustering.}
 
-\item{\code{task}}{Character: "clustering", "classification", or "regression".}
+\item{\code{task}}{Character: "clustering" or "classification".}
 
 \item{\code{affinityFunc}}{Character. Affinity function for evaluation.}
 

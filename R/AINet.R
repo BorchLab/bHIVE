@@ -125,8 +125,8 @@ AINet <- R6::R6Class(
 
     #' @description Fit the AINet algorithm to data.
     #' @param X Numeric matrix or data frame (n x d).
-    #' @param y Optional target: factor (classification) or numeric (regression).
-    #' @param task Character: "clustering", "classification", or "regression".
+    #' @param y Optional factor target for classification.
+    #' @param task Character: "clustering" or "classification".
     #'   Inferred from y if NULL.
     #' @param ... Additional arguments (currently unused).
     #' @return Invisible self, with \code{result} populated.
@@ -136,26 +136,14 @@ AINet <- R6::R6Class(
 
       # Infer task
       if (is.null(task)) {
-        task <- if (is.null(y)) "clustering"
-                else if (is.factor(y)) "classification"
-                else "regression"
+        task <- if (is.null(y)) "clustering" else "classification"
       }
-      task <- match.arg(task, c("clustering", "classification", "regression"))
+      task <- match.arg(task, c("clustering", "classification"))
 
       X <- as.matrix(X)
       n <- nrow(X)
       d <- ncol(X)
       cfg <- self$config
-
-      # Standardize regression target
-      y_orig <- y
-      y_mean <- 0; y_sd <- 1
-      if (task == "regression") {
-        y_mean <- mean(y, na.rm = TRUE)
-        y_sd   <- sd(y, na.rm = TRUE)
-        if (y_sd == 0) y_sd <- 1
-        y <- (y - y_mean) / y_sd
-      }
 
       # ================================
       # 1. Initialize antibody population
@@ -167,15 +155,13 @@ AINet <- R6::R6Class(
       # ================================
       # 2. Task-specific setup
       # ================================
-      task_int <- switch(task, clustering = 0L, classification = 1L, regression = 2L)
+      task_int <- switch(task, clustering = 0L, classification = 1L)
       nClasses <- 0L
       classes  <- NULL
       if (task == "classification") {
         classes  <- levels(y)
         nClasses <- length(classes)
         y_num    <- as.numeric(y) - 1  # 0-indexed class
-      } else if (task == "regression") {
-        y_num <- y
       } else {
         y_num <- rep(0, n)
       }
@@ -215,10 +201,6 @@ AINet <- R6::R6Class(
             if (all(row == 0)) classes[sample(nClasses, 1)]
             else classes[which.max(row)]
           })
-        } else if (task == "regression") {
-          antibody_values <- ifelse(cs_result$sum_aff > 0,
-                                    cs_result$sum_y / cs_result$sum_aff,
-                                    mean(y, na.rm = TRUE))
         }
 
         # (e) Network suppression [C++]
@@ -233,8 +215,6 @@ AINet <- R6::R6Class(
 
         if (task == "classification") {
           antibody_classes <- antibody_classes[kept_idx]
-        } else if (task == "regression") {
-          antibody_values <- antibody_values[kept_idx]
         }
 
         if (m_new == 0) {
@@ -274,37 +254,22 @@ AINet <- R6::R6Class(
 
       if (task == "clustering") {
         fa <- final_assignment_cpp(X, A_final, cfg$affinityFunc, cfg$distFunc,
-                                   0L, alpha, c_p, p_p, Sigma_inv,
-                                   numeric(0), 0.0)
+                                   0L, alpha, c_p, p_p, Sigma_inv)
         assignments <- as.numeric(factor(fa$assignments))
         self$result <- list(
           antibodies  = A_final,
           assignments = assignments,
           task        = task
         )
-      } else if (task == "classification") {
+      } else {
         fa <- final_assignment_cpp(X, A_final, cfg$affinityFunc, cfg$distFunc,
-                                   1L, alpha, c_p, p_p, Sigma_inv,
-                                   numeric(0), 0.0)
+                                   1L, alpha, c_p, p_p, Sigma_inv)
         assignments <- antibody_classes[fa$best_antibody_idx]
         self$result <- list(
           antibodies       = A_final,
           assignments      = assignments,
           antibody_classes = antibody_classes,
           task             = task
-        )
-      } else {
-        fa <- final_assignment_cpp(X, A_final, cfg$affinityFunc, cfg$distFunc,
-                                   2L, alpha, c_p, p_p, Sigma_inv,
-                                   antibody_values, mean(y, na.rm = TRUE))
-        predictions <- fa$predictions * y_sd + y_mean
-        self$result <- list(
-          antibodies      = A_final,
-          assignments     = fa$cluster_assign,
-          predictions     = predictions,
-          antibody_values = antibody_values,
-          overall_mean    = mean(y, na.rm = TRUE),
-          task            = task
         )
       }
 

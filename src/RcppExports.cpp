@@ -83,8 +83,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // final_assignment_cpp
-Rcpp::List final_assignment_cpp(const arma::mat& X, const arma::mat& A, const std::string& affinity_type, const std::string& dist_type, int task_int, double alpha, double c_param, double p_param, const arma::mat& Sigma_inv, const arma::vec& antibody_values, double overall_mean);
-RcppExport SEXP _bHIVE_final_assignment_cpp(SEXP XSEXP, SEXP ASEXP, SEXP affinity_typeSEXP, SEXP dist_typeSEXP, SEXP task_intSEXP, SEXP alphaSEXP, SEXP c_paramSEXP, SEXP p_paramSEXP, SEXP Sigma_invSEXP, SEXP antibody_valuesSEXP, SEXP overall_meanSEXP) {
+Rcpp::List final_assignment_cpp(const arma::mat& X, const arma::mat& A, const std::string& affinity_type, const std::string& dist_type, int task_int, double alpha, double c_param, double p_param, const arma::mat& Sigma_inv);
+RcppExport SEXP _bHIVE_final_assignment_cpp(SEXP XSEXP, SEXP ASEXP, SEXP affinity_typeSEXP, SEXP dist_typeSEXP, SEXP task_intSEXP, SEXP alphaSEXP, SEXP c_paramSEXP, SEXP p_paramSEXP, SEXP Sigma_invSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -97,9 +97,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type c_param(c_paramSEXP);
     Rcpp::traits::input_parameter< double >::type p_param(p_paramSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type Sigma_inv(Sigma_invSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type antibody_values(antibody_valuesSEXP);
-    Rcpp::traits::input_parameter< double >::type overall_mean(overall_meanSEXP);
-    rcpp_result_gen = Rcpp::wrap(final_assignment_cpp(X, A, affinity_type, dist_type, task_int, alpha, c_param, p_param, Sigma_inv, antibody_values, overall_mean));
+    rcpp_result_gen = Rcpp::wrap(final_assignment_cpp(X, A, affinity_type, dist_type, task_int, alpha, c_param, p_param, Sigma_inv));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -190,7 +188,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bHIVE_compute_distance_matrix", (DL_FUNC) &_bHIVE_compute_distance_matrix, 5},
     {"_bHIVE_compute_pairwise_distance", (DL_FUNC) &_bHIVE_compute_pairwise_distance, 4},
     {"_bHIVE_clonal_selection_iteration_cpp", (DL_FUNC) &_bHIVE_clonal_selection_iteration_cpp, 15},
-    {"_bHIVE_final_assignment_cpp", (DL_FUNC) &_bHIVE_final_assignment_cpp, 11},
+    {"_bHIVE_final_assignment_cpp", (DL_FUNC) &_bHIVE_final_assignment_cpp, 9},
     {"_bHIVE_init_kmeanspp_cpp", (DL_FUNC) &_bHIVE_init_kmeanspp_cpp, 2},
     {"_bHIVE_idiotypic_dynamics_cpp", (DL_FUNC) &_bHIVE_idiotypic_dynamics_cpp, 12},
     {"_bHIVE_network_suppression_cpp", (DL_FUNC) &_bHIVE_network_suppression_cpp, 5},

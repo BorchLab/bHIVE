@@ -22,41 +22,42 @@ test_that(".validate_bHIVE_input: X must be a matrix or data frame", {
   )
 })
 
-test_that(".validate_bHIVE_input: y must be factor or numeric if not NULL", {
+test_that(".validate_bHIVE_input: y must be factor if not NULL", {
   df_X <- data.frame(a=1:3, b=2:4)
-  
+
   # y as character => error
   y_char <- c("cat","dog","bird")
   expect_error(
     .validate_bHIVE_input(X=df_X, y=y_char),
-    "y must be a factor.*numeric"
+    "y must be a factor"
   )
-  
+
+  # y as numeric => error
+  y_num <- c(10,20,30)
+  expect_error(
+    .validate_bHIVE_input(X=df_X, y=y_num),
+    "y must be a factor"
+  )
+
   # y as factor => OK
   y_factor <- factor(c("A","B","C"))
   expect_silent(
     .validate_bHIVE_input(X=df_X, y=y_factor)
   )
-  
-  # y as numeric => OK
-  y_num <- c(10,20,30)
-  expect_silent(
-    .validate_bHIVE_input(X=df_X, y=y_num)
-  )
 })
 
 test_that(".validate_bHIVE_input: X and y must have same number of rows", {
   df_X <- data.frame(a=1:3, b=2:4)
-  
+
   # y with different length => error
-  y_mismatch <- c(1,2,3,4)
+  y_mismatch <- factor(c("a","b","c","d"))
   expect_error(
     .validate_bHIVE_input(X=df_X, y=y_mismatch),
     "X and y must have the same number of rows."
   )
-  
+
   # matching length => OK
-  y_ok <- c(1,2,3)
+  y_ok <- factor(c("a","b","c"))
   expect_silent(
     .validate_bHIVE_input(X=df_X, y=y_ok)
   )
@@ -81,26 +82,26 @@ test_that(".validate_bHIVE_input: Input X cannot have missing values", {
 test_that(".validate_bHIVE_input: Function returns TRUE invisibly on success", {
   # We can check the return value using expect_invisible
   df_X <- data.frame(x=1:5, y=6:10)
-  y_num <- 1:5
-  
+  y_fac <- factor(letters[1:5])
+
   expect_invisible(
-    .validate_bHIVE_input(X=df_X, y=y_num)
+    .validate_bHIVE_input(X=df_X, y=y_fac)
   )
-  out <- .validate_bHIVE_input(X=df_X, y=y_num)
+  out <- .validate_bHIVE_input(X=df_X, y=y_fac)
   expect_true(isTRUE(out))
 })
 
 test_that(".update_prototype: Clustering: Always pulls prototype toward x_i", {
   ab_vec <- c(1,2)
   x_i    <- c(3,4)
-  
+
   grad <- .update_prototype(
     ab_vec = ab_vec,
     x_i = x_i,
     task = "clustering",
-    loss = "mse"  # the 'loss' is ignored for clustering in the current logic
+    loss = "mae"  # the 'loss' is ignored for clustering in the current logic
   )
-  
+
   # Expect x_i - ab_vec
   expect_equal(grad, c(2,2))
 })
@@ -175,107 +176,15 @@ test_that(".update_prototype: Classification + mae uses sign-based approach", {
 test_that(".update_prototype: Classification + no assigned label => zero grad", {
   ab_vec <- c(1,1)
   x_i    <- c(2,2)
-  
+
   grad <- .update_prototype(
     ab_vec = ab_vec,
     x_i = x_i,
     same_label = NA,
     task = "classification",
-    loss = "mse"
+    loss = "categorical_crossentropy"
   )
   expect_equal(grad, c(0,0))
-})
-
-test_that(".update_prototype: Classification + huber or poisson does fallback (zero)", {
-  ab_vec <- c(1,1)
-  x_i    <- c(3,3)
-  
-  grad_huber <- .update_prototype(
-    ab_vec, x_i, same_label=TRUE, 
-    task="classification", loss="huber"
-  )
-  grad_poisson <- .update_prototype(
-    ab_vec, x_i, same_label=FALSE, 
-    task="classification", loss="poisson", 
-    push_away=TRUE
-  )
-  
-  expect_equal(grad_huber, c(0,0))
-  expect_equal(grad_poisson, c(0,0))
-})
-
-test_that(".update_prototype: Regression + MSE => residual (x_i - ab_vec)", {
-  ab_vec <- c(1,2)
-  x_i    <- c(4,6)
-  
-  grad <- .update_prototype(
-    ab_vec=ab_vec,
-    x_i=x_i,
-    task="regression",
-    loss="mse"
-  )
-  expect_equal(grad, c(3,4))
-})
-
-test_that(".update_prototype: Regression + MAE => sign-based in each dimension", {
-  ab_vec <- c(2,5)
-  x_i    <- c(1,8)
-  # residual = c(-1,3) => sign => c(-1,1)
-  grad <- .update_prototype(
-    ab_vec=ab_vec,
-    x_i=x_i,
-    task="regression",
-    loss="mae"
-  )
-  expect_equal(grad, c(-1,1))
-})
-
-test_that(".update_prototype: Regression + huber => MSE region vs. linear region check", {
-  ab_vec <- c(0,0)
-  x_i    <- c(0.5,0.5)
-  
-  grad_mse_region <- .update_prototype(
-    ab_vec=c(0,0),
-    x_i=c(0.5,0.5),
-    task="regression",
-    loss="huber",
-    huber_delta=1
-  )
-  expect_equal(grad_mse_region, c(0.5,0.5))
-  
-  # If huber_delta < 0.7 => linear region => sign => c(1,1)* delta
-  grad_linear_region <- .update_prototype(
-    ab_vec=c(0,0),
-    x_i=c(0.5,0.5),
-    task="regression",
-    loss="huber",
-    huber_delta=0.5
-  )
-  expect_equal(grad_linear_region, c(0.5,0.5))
-  
-  # Another scenario: if x_i= c(2,2), distance=2.828 > 1 => => c(1,1)
-  grad_big <- .update_prototype(
-    ab_vec=c(0,0),
-    x_i=c(2,2),
-    task="regression",
-    loss="huber",
-    huber_delta=1
-  )
-  # distance= sqrt(4+4)=2.828 >1 => linear => c(1,1)
-  expect_equal(grad_big, c(1,1))
-})
-
-test_that(".update_prototype: Regression + poisson => naive same as residual", {
-  ab_vec <- c(2,3)
-  x_i    <- c(5,7)
-  # residual= c(3,4)
-  grad <- .update_prototype(
-    ab_vec=ab_vec,
-    x_i=x_i,
-    task="regression",
-    loss="poisson"
-  )
-  expect_equal(grad, c(3,4))
 })
 
 test_that(".update_prototype: Classification + 'cosine' => same push/pull approach", {

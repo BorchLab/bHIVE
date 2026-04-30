@@ -14,12 +14,6 @@ fake_result_single <- list(
   membership = factor(sample(1:3, 10, replace = TRUE))    # used for scatterplots in clustering
 )
 
-# Fake result for regression (grouping is forced to "All")
-fake_result_regression <- list(
-  antibodies = matrix(rnorm(6), nrow = 2, ncol = 3),
-  assignments = factor(sample(1:2, 10, replace = TRUE))
-)
-
 # Fake multi-layer result: a list of two layers where each element has an antibodies field.
 fake_multilayer <- list(
   list(
@@ -48,19 +42,6 @@ test_that("Scatter plot returns a ggplot object for clustering", {
   expect_true(grepl("Test Scatter", p$labels$title))
 })
 
-test_that("Scatter plot returns a ggplot object for regression", {
-  p <- visualizeHIVE(result = fake_result_regression,
-                     X = X_mat,
-                     plot_type = "scatter",
-                     title = "Regression Scatter",
-                     layer = 1,
-                     task = "regression",
-                     transformation_method = "PCA",
-                     transform = TRUE)
-  expect_s3_class(p, "ggplot")
-  expect_true(grepl("Regression Scatter", p$labels$title))
-})
-
 test_that("Boxplot returns a ggplot object for classification", {
   p <- visualizeHIVE(result = fake_result_single,
                      X = as.data.frame(X_mat),
@@ -71,17 +52,6 @@ test_that("Boxplot returns a ggplot object for classification", {
                      task = "classification")
   expect_s3_class(p, "ggplot")
   expect_true(grepl("Boxplot Test", p$labels$title))
-})
-
-test_that("Boxplot returns a ggplot object for regression", {
-  p <- visualizeHIVE(result = fake_result_regression,
-                     X = as.data.frame(X_mat),
-                     plot_type = "boxplot",
-                     feature = 2,
-                     title = "Boxplot Regression",
-                     layer = 1,
-                     task = "regression")
-  expect_s3_class(p, "ggplot")
 })
 
 test_that("Violin plot returns a ggplot object", {

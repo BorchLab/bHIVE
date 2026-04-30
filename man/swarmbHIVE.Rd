@@ -7,7 +7,7 @@
 swarmbHIVE(
   X,
   y = NULL,
-  task = c("clustering", "classification", "regression"),
+  task = c("clustering", "classification"),
   grid,
   metric = NULL,
   maxIter = 50,
@@ -16,24 +16,21 @@ swarmbHIVE(
 )
 }
 \arguments{
-\item{X}{A numeric matrix or data frame of input features (rows = 
+\item{X}{A numeric matrix or data frame of input features (rows =
 observations, columns = features).}
 
-\item{y}{Optional. A target vector: factor for classification, numeric for 
-regression. 
-  If \code{NULL}, clustering is performed.}
+\item{y}{Optional. A factor target vector for classification.
+If \code{NULL}, clustering is performed.}
 
-\item{task}{Character. One of \code{"clustering"}, \code{"classification"},
-or \code{"regression"}.}
+\item{task}{Character. One of \code{"clustering"} or \code{"classification"}.}
 
-\item{grid}{A data frame specifying the hyperparameter combinations. 
-Should have columns: \code{nAntibodies}, \code{beta}, \code{epsilon}. 
+\item{grid}{A data frame specifying the hyperparameter combinations.
+Should have columns: \code{nAntibodies}, \code{beta}, \code{epsilon}.
 (Optionally more if you want to pass other arguments to \code{bHIVE()}.)}
 
 \item{metric}{Character. Name of the evaluation metric. Options:
 \itemize{
   \item \strong{Classification}: "accuracy", "balanced_accuracy", "f1", "kappa"
-  \item \strong{Regression}: "rmse", "mae", "r2"
   \item \strong{Clustering}: "silhouette", "davies_bouldin", "calinski_harabasz"
 }}
 
@@ -55,16 +52,15 @@ A list:
   }
 }
 \description{
-Performs hyperparameter tuning for the bHIVE algorithm over a grid of 
-hyperparameter values or an externally provided data frame of parameter 
+Performs hyperparameter tuning for the bHIVE algorithm over a grid of
+hyperparameter values or an externally provided data frame of parameter
 combinations. Evaluates each combination using different metrics:
 }
 \details{
 - **Classification**: "accuracy", "balanced_accuracy", "f1", "kappa"
-- **Regression**: "rmse", "mae", "r2"
-- **Clustering**: "silhouette", "davies_bouldin", or "calinski_harabasz" 
+- **Clustering**: "silhouette", "davies_bouldin", or "calinski_harabasz"
 
-**Note**: Some metrics require additional packages or assumptions 
+**Note**: Some metrics require additional packages or assumptions
 (e.g., multi-class classification for "f1" is calculated as a macro-average).
 }
 \examples{

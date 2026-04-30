@@ -13,7 +13,7 @@ visualizeHIVE(
   transformation_method = c("PCA", "UMAP", "tSNE", "none"),
   title = "HIVE Results",
   layer = 1,
-  task = c("clustering", "classification", "regression"),
+  task = c("clustering", "classification"),
   ...
 )
 }
@@ -55,8 +55,8 @@ For bHIVE outputs, default is \code{1}. For multilayer honeycombHIVE
 outputs, specify one or more layer indices.}
 
 \item{task}{Character. The prediction task for the result: one of
-\code{"clustering"}, \code{"classification"},
- or \code{"regression"}. This is used to determine how grouping is computed.}
+\code{"clustering"} or \code{"classification"}. This is used to determine
+how grouping is computed.}
 
 \item{...}{Additional arguments passed to PCA, tSNE, UMAP, or ggplot functions.}
 }
@@ -117,13 +117,4 @@ visualizeHIVE(result = res,
               layer = 1,
               task = "classification")
 
-# For regression: prototype grouping is overridden to a constant.
-visualizeHIVE(result = res,
-              X = iris[, 1:4],
-              plot_type = "density",
-              feature = "Sepal.Width",
-              title = "Sepal Width Density (Layer 1)",
-              layer = 1,
-              task = "regression")
-              
 }

@@ -12,15 +12,13 @@
 // Returns a list with:
 //   - A: updated antibody matrix
 //   - class_counts: (classification) weighted vote matrix
-//   - sum_y: (regression) weighted sum of y values
-//   - sum_aff: (regression) sum of affinities
 //
 // [[Rcpp::export]]
 Rcpp::List clonal_selection_iteration_cpp(
     arma::mat A,                     // passed by value (modified in place)
     const arma::mat& X,
-    const arma::vec& y_num,          // numeric y (regression) or 0-indexed class int
-    int task_int,                    // 0=clustering, 1=classification, 2=regression
+    const arma::vec& y_num,          // 0-indexed class int (classification)
+    int task_int,                    // 0=clustering, 1=classification
     int k,
     double beta,
     double maxClones,
@@ -41,13 +39,9 @@ Rcpp::List clonal_selection_iteration_cpp(
 
   // Task-specific accumulators
   arma::mat class_counts;
-  arma::vec sum_y, sum_aff;
 
   if (task == TaskType::CLASSIFICATION) {
     class_counts = arma::zeros<arma::mat>(m, nClasses);
-  } else if (task == TaskType::REGRESSION) {
-    sum_y = arma::zeros<arma::vec>(m);
-    sum_aff = arma::zeros<arma::vec>(m);
   }
 
   // Compute full affinity matrix (n x m) -- the big BLAS win
@@ -74,13 +68,6 @@ Rcpp::List clonal_selection_iteration_cpp(
       for (arma::uword ki = 0; ki < k2; ++ki) {
         const arma::uword jj = top_idx(ki);
         class_counts(jj, class_col) += aff_values(jj);
-      }
-    } else if (task == TaskType::REGRESSION) {
-      const double y_val = y_num(i);
-      for (arma::uword ki = 0; ki < k2; ++ki) {
-        const arma::uword jj = top_idx(ki);
-        sum_y(jj) += y_val * aff_values(jj);
-        sum_aff(jj) += aff_values(jj);
       }
     }
 
@@ -129,15 +116,13 @@ Rcpp::List clonal_selection_iteration_cpp(
 
   return Rcpp::List::create(
     Rcpp::Named("A") = A,
-    Rcpp::Named("class_counts") = class_counts,
-    Rcpp::Named("sum_y") = sum_y,
-    Rcpp::Named("sum_aff") = sum_aff
+    Rcpp::Named("class_counts") = class_counts
   );
 }
 
 
 // Final assignment computation
-// For clustering/regression: assign each point to nearest antibody by distance
+// For clustering: assign each point to nearest antibody by distance
 // For classification: assign each point to antibody with highest affinity
 // [[Rcpp::export]]
 Rcpp::List final_assignment_cpp(
@@ -149,9 +134,7 @@ Rcpp::List final_assignment_cpp(
     double alpha,
     double c_param,
     double p_param,
-    const arma::mat& Sigma_inv,
-    const arma::vec& antibody_values,
-    double overall_mean) {
+    const arma::mat& Sigma_inv) {
 
   const arma::uword n = X.n_rows;
   const TaskType task = static_cast<TaskType>(task_int);
@@ -166,7 +149,7 @@ Rcpp::List final_assignment_cpp(
     const arma::ivec result = arma::conv_to<arma::ivec>::from(assignments) + 1;
     return Rcpp::List::create(Rcpp::Named("assignments") = result);
 
-  } else if (task == TaskType::CLASSIFICATION) {
+  } else {
     const AffinityType atype = parse_affinity_type(affinity_type);
     const arma::mat aff = affinity_matrix_cpp(X, A, atype, alpha, c_param, p_param);
     arma::uvec best_idx(n);
@@ -175,35 +158,6 @@ Rcpp::List final_assignment_cpp(
     }
     const arma::ivec result = arma::conv_to<arma::ivec>::from(best_idx) + 1;
     return Rcpp::List::create(Rcpp::Named("best_antibody_idx") = result);
-
-  } else {
-    // Regression: weighted average + nearest cluster
-    const AffinityType atype = parse_affinity_type(affinity_type);
-    const arma::mat aff = affinity_matrix_cpp(X, A, atype, alpha, c_param, p_param);
-    arma::vec predictions(n);
-
-    for (arma::uword i = 0; i < n; ++i) {
-      const arma::rowvec aff_row = aff.row(i);
-      const double s_aff = arma::accu(aff_row);
-      if (s_aff <= 0.0) {
-        predictions(i) = overall_mean;
-      } else {
-        predictions(i) = arma::accu(aff_row.t() % antibody_values) / s_aff;
-      }
-    }
-
-    const DistanceType dtype = parse_distance_type(dist_type);
-    const arma::mat D = distance_matrix_cpp(X, A, dtype, p_param, Sigma_inv);
-    arma::uvec cluster_assign(n);
-    for (arma::uword i = 0; i < n; ++i) {
-      cluster_assign(i) = D.row(i).index_min();
-    }
-    const arma::ivec cluster_result = arma::conv_to<arma::ivec>::from(cluster_assign) + 1;
-
-    return Rcpp::List::create(
-      Rcpp::Named("predictions") = predictions,
-      Rcpp::Named("cluster_assign") = cluster_result
-    );
   }
 }
 

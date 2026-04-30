@@ -1,3 +1,18 @@
+# bHIVE 0.99.2
+
+## Breaking Changes
+* Removed regression task support across the package. The previous regression
+  implementation was unreliable and is being redesigned. `bHIVE()`,
+  `honeycombHIVE()`, `swarmbHIVE()`, `refineB()`, `AINet`, `GerminalCenter`,
+  `bHIVEmodel`, `honeycombHIVEmodel`, and `visualizeHIVE()` no longer accept
+  `task = "regression"` or numeric `y`.
+* Removed regression-only loss functions (`mse`, `huber`, `poisson`) and
+  regression metrics (`rmse`, `mae`, `r2`) from `swarmbHIVE()`.
+* Removed `refineHuberDelta` parameter from `honeycombHIVE()` and
+  `honeycombHIVEmodel`.
+* `final_assignment_cpp()` no longer accepts `antibody_values` or
+  `overall_mean` arguments.
+
 # bHIVE 0.99.1
 
 ## C++ Backend

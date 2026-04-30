@@ -17,8 +17,8 @@ clonal_selection_iteration_cpp <- function(A, X, y_num, task_int, k, beta, maxCl
     .Call(`_bHIVE_clonal_selection_iteration_cpp`, A, X, y_num, task_int, k, beta, maxClones, mutationDecay, mutationMin, iter, affinity_type, alpha, c_param, p_param, nClasses)
 }
 
-final_assignment_cpp <- function(X, A, affinity_type, dist_type, task_int, alpha, c_param, p_param, Sigma_inv, antibody_values, overall_mean) {
-    .Call(`_bHIVE_final_assignment_cpp`, X, A, affinity_type, dist_type, task_int, alpha, c_param, p_param, Sigma_inv, antibody_values, overall_mean)
+final_assignment_cpp <- function(X, A, affinity_type, dist_type, task_int, alpha, c_param, p_param, Sigma_inv) {
+    .Call(`_bHIVE_final_assignment_cpp`, X, A, affinity_type, dist_type, task_int, alpha, c_param, p_param, Sigma_inv)
 }
 
 init_kmeanspp_cpp <- function(X, nCenters) {

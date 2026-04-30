@@ -1,17 +1,16 @@
 #' bHIVE: B-cell Hybrid Immune Variant Engine
 #'
-#' Implements an artificial immune network algorithm for clustering, classification, 
-#' and regression tasks. The algorithm evolves a population of "antibodies" 
-#' via clonal selection and mutation, applies network suppression to maintain 
+#' Implements an artificial immune network algorithm for clustering and
+#' classification tasks. The algorithm evolves a population of "antibodies"
+#' via clonal selection and mutation, applies network suppression to maintain
 #' diversity, and assigns data points based on affinity or distance metrics.
 #'
-#' @param X A numeric matrix or data frame of input features, with rows as 
+#' @param X A numeric matrix or data frame of input features, with rows as
 #' observations and columns as features.
-#' @param y Optional. A target vector. Use for classification (factor) or 
-#' regression (numeric). If NULL, clustering will be performed.
-#' @param task Character. Specifies the task to perform: \code{"clustering"}, 
-#' \code{"classification"}, or \code{"regression"}. If NULL, it is inferred 
-#' based on \code{y}.
+#' @param y Optional. A factor target vector for classification. If NULL,
+#' clustering will be performed.
+#' @param task Character. Specifies the task to perform: \code{"clustering"} or
+#' \code{"classification"}. If NULL, it is inferred based on \code{y}.
 #' @param nAntibodies Integer. The initial population size of antibodies. 
 #' @param beta Numeric. Clone multiplier (controls how many clones are 
 #' generated for top-matching antibodies).
@@ -65,11 +64,9 @@
 #' @return A list:
 #'   \itemize{
 #'     \item \code{antibodies}: Final antibody vectors (nAntibodies x nFeatures).
-#'     \item \code{assignments}: 
+#'     \item \code{assignments}:
 #'         - For clustering: integer cluster IDs in [1..#Antibodies].
 #'         - For classification: predicted labels.
-#'         - For regression: integer cluster index (in [1..#Antibodies]) if used in synergy with \code{refineB}.
-#'     \item \code{predictions}: Only for regression, the numeric predictions per row.
 #'     \item \code{task}: The chosen task.
 #'   }
 #'
@@ -101,19 +98,6 @@
 #'               verbose = FALSE)
 #' table(res$assignments, y)
 #'
-#' # Example 3: Regression
-#' y <- as.numeric(iris$Sepal.Length)
-#' res <- bHIVE(X = X, 
-#'              y = y, 
-#'              task = "regression", 
-#'              nAntibodies = 30, 
-#'              beta = 5, 
-#'              epsilon = 0.01, 
-#'              maxIter = 20, 
-#'              k = 3, 
-#'              verbose = FALSE)
-#' cor(res$assignments, y)
-#' 
 #' @importFrom stats rnorm runif sd
 #' @export
 bHIVE <- function(X, 
@@ -147,28 +131,19 @@ bHIVE <- function(X,
   if (is.null(task)) {
     if (is.null(y)) {
       task <- "clustering"
-    } else if (is.factor(y)) {
-      task <- "classification"
     } else {
-      task <- "regression"
+      task <- "classification"
     }
   }
-  task <- match.arg(task, c("clustering","classification","regression"))
-  
+  task <- match.arg(task, c("clustering","classification"))
+
   initMethod <- match.arg(initMethod, c("sample", "random", "random_uniform","kmeans++"))
-  
+
   X <- as.matrix(X)
   n <- nrow(X)
   d <- ncol(X)
-  
-  if (task == "regression") {
-    y_orig <- y                     # Save original y for future use
-    y_mean <- mean(y, na.rm = TRUE)
-    y_sd <- sd(y, na.rm = TRUE)
-    if (y_sd == 0) y_sd <- 1.        # Prevent division by zero
-    y <- (y - y_mean) / y_sd         # Standardize y
-  }
-  
+
+
   # ===================
   # 1. Antibody Initialization
   # ===================
@@ -227,10 +202,6 @@ bHIVE <- function(X,
     nClasses <- length(classes)
     class_counts <- matrix(0, nrow = m, ncol = nClasses)
     colnames(class_counts) <- classes
-  } else if (task == "regression") {
-    sum_y   <- numeric(m)
-    sum_aff <- numeric(m)
-    overall_mean <- mean(y, na.rm=TRUE)  # y is scaled, so overall_mean ~ 0
   }
   
   # For early stopping
@@ -245,9 +216,6 @@ bHIVE <- function(X,
     # reset counters
     if (task=="classification") {
       class_counts[] <- 0
-    } else if (task=="regression") {
-      sum_y[] <- 0
-      sum_aff[] <- 0
     }
     
     # For each data point
@@ -268,20 +236,13 @@ bHIVE <- function(X,
       k2 <- min(k, m)
       top_idx <- sort.int(aff_values, decreasing=TRUE, index.return=TRUE)$ix[seq_len(k2)]
       
-      # classification/regression counters
+      # classification counters
       if (task == "classification") {
         y_class <- as.character(y[i])
         class_col <- match(y_class, colnames(class_counts))
         # Weighted vote
         for (jj in top_idx) {
           class_counts[jj, class_col] <- class_counts[jj, class_col] + aff_values[jj]
-        }
-      } else if (task == "regression") {
-        # Weighted sum
-        y_val <- y[i]
-        for (jj in top_idx) {
-          sum_y[jj]   <- sum_y[jj] + y_val * aff_values[jj]
-          sum_aff[jj] <- sum_aff[jj] + aff_values[jj]
         }
       }
       
@@ -304,7 +265,7 @@ bHIVE <- function(X,
       }
     }
     
-    # update classification/regression
+    # update classification
     if (task=="classification") {
       # each antibody's label is the class with largest class_counts row
       antibody_classes <- apply(class_counts, 1, function(row) {
@@ -315,8 +276,6 @@ bHIVE <- function(X,
           colnames(class_counts)[which.max(row)]
         }
       })
-    } else if (task=="regression") {
-      antibody_values <- ifelse(sum_aff > 0, sum_y/sum_aff, overall_mean)
     }
     
     # ======================
@@ -344,8 +303,6 @@ bHIVE <- function(X,
     
     if (task == "classification") {
       class_counts <- class_counts[kept_indices, , drop = FALSE]
-    } else if (task == "regression") {
-      antibody_values <- antibody_values[kept_indices]
     }
     
     # If suppressed everything => abort
@@ -408,8 +365,8 @@ bHIVE <- function(X,
       task        = task
     )
     
-  } else if (task == "classification") {
-    # For each data row, choose the antibody with largest affinity
+  } else {
+    # Classification: choose antibody with largest affinity per row
     assignments <- character(n)
     for (i in seq_len(n)) {
       x_i <- X[i, ]
@@ -424,57 +381,14 @@ bHIVE <- function(X,
       }
       assignments[i] <- antibody_classes[best_j]
     }
-    
+
     res <- list(
       antibodies  = A,
       assignments = assignments,
       task        = task
     )
-    
-  } else {
-    # Regression
-    # predictions for each data row => weighted average of antibody_values
-    predictions <- numeric(n)
-    for (i in seq_len(n)) {
-      x_i <- X[i, ]
-      aff_vec <- numeric(m)
-      for (j in seq_len(m)) {
-        aff_vec[j] <- affFn(x_i, A[j, ], affinityParams)
-      }
-      s_aff <- sum(aff_vec, na.rm=TRUE)
-      if (s_aff == 0) {
-        predictions[i] <- overall_mean
-      } else {
-        predictions[i] <- sum(aff_vec * antibody_values, na.rm=TRUE) / s_aff
-      }
-    }
-    
-    # produce integer cluster index => nearest by distance
-    cluster_assign <- integer(n)
-    for (i in seq_len(n)) {
-      x_i <- X[i, ]
-      min_dist <- Inf
-      best_j <- 1L
-      for (j in seq_len(m)) {
-        d_j <- distFn(x_i, A[j, ], affinityParams)
-        if (d_j < min_dist) {
-          min_dist <- d_j
-          best_j <- j
-        }
-      }
-      cluster_assign[i] <- best_j
-    }
-    
-    predictions <- predictions * y_sd + y_mean
-    
-    res <- list(
-      antibodies  = A,
-      assignments = cluster_assign,  # integer cluster IDs
-      predictions = predictions,       # numeric predicted values
-      task        = task
-    )
   }
-  
+
   return(res)
 }
 

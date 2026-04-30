@@ -22,8 +22,7 @@ enum class DistanceType {
 
 enum class TaskType {
   CLUSTERING = 0,
-  CLASSIFICATION = 1,
-  REGRESSION = 2
+  CLASSIFICATION = 1
 };
 
 // Convert R string to enum
@@ -51,7 +50,6 @@ inline DistanceType parse_distance_type(const std::string& s) {
 inline TaskType parse_task_type(const std::string& s) {
   if (s == "clustering")     return TaskType::CLUSTERING;
   if (s == "classification") return TaskType::CLASSIFICATION;
-  if (s == "regression")     return TaskType::REGRESSION;
   Rcpp::stop("Invalid task type: " + s);
   return TaskType::CLUSTERING; // unreachable
 }

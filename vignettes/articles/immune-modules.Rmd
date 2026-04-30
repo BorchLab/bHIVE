@@ -126,7 +126,6 @@ receive Tfh help survive -- this implements quality-based selection pressure.
 The quality metric is task-aware:
 
 - **Classification**: proportion of correctly matched labels
-- **Regression**: inverse prediction error
 - **Clustering**: local density (sum of affinities to assigned data points)
 
 ```{r gc-demo}

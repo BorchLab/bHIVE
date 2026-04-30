@@ -51,35 +51,6 @@ test_that("honeycombHIVE runs successfully for classification task", {
   }
 })
 
-test_that("honeycombHIVE runs successfully for regression task", {
-  if (!requireNamespace("MASS", quietly = TRUE)) install.packages("MASS")
-  library(MASS)
-  data(Boston)
-  X <- as.matrix(Boston[, -14])
-  y <- Boston$medv
-  
-  # Run honeycombHIVE for regression
-  res <- honeycombHIVE(X = X, 
-                       y = y, 
-                       task = "regression", 
-                       layers = 3, 
-                       nAntibodies = 15, 
-                       beta = 5, 
-                       maxIter = 5,
-                       verbose = FALSE)
-  
-  # Test structure and results
-  expect_type(res, "list")
-  expect_length(res, 3) # 3 layers
-  for (layer in res) {
-    expect_named(layer, c("antibodies", "assignments", "predictions", "task", "membership"))
-    expect_equal(layer$task, "regression")
-    expect_true(is.matrix(layer$antibodies))
-    expect_true(is.numeric(layer$assignments))
-    expect_equal(length(layer$membership), 506)
-  }
-})
-
 test_that("honeycombHIVE handles different affinity functions", {
   data(iris)
   X <- as.matrix(iris[, 1:4])
@@ -173,53 +144,6 @@ test_that("honeycombHIVE refine=TRUE for classification with cross-entropy", {
   preds_ref    <- res_ref[[2]]$predictions
 })
 
-test_that("honeycombHIVE refine=TRUE for regression (MSE)", {
-  if (!requireNamespace("MASS", quietly = TRUE)) install.packages("MASS")
-  library(MASS)
-  data(Boston)
-  X <- as.matrix(Boston[, -14])
-  y <- Boston$medv
-  
-  # Without refine
-  res_no_ref <- honeycombHIVE(
-    X = X,
-    y = y,
-    task = "regression",
-    layers = 2,
-    nAntibodies = 10,
-    maxIter = 5,
-    verbose = FALSE,
-    refine = FALSE
-  )
-  
-  # With refine
-  res_ref <- honeycombHIVE(
-    X = X,
-    y = y,
-    task = "regression",
-    layers = 2,
-    nAntibodies = 10,
-    maxIter = 5,
-    verbose = FALSE,
-    refine = TRUE,
-    refineLoss = "mse",
-    refineSteps = 5,
-    refineLR = 0.01
-  )
-  
-  # Check structure
-  expect_length(res_ref, 2)
-  for (ly in res_ref) {
-    expect_named(ly, c("antibodies","assignments","predictions","task","membership"))
-    expect_equal(ly$task, "regression")
-    expect_true(is.matrix(ly$antibodies))
-  }
-  
-  # Compare final prototypes
-  final_no_ref <- res_no_ref[[2]]$antibodies
-  final_ref    <- res_ref[[2]]$antibodies
-  expect_false(isTRUE(all.equal(final_no_ref, final_ref)))
-})
 set.seed(42)
 test_that("honeycombHIVE refineSteps=0 does not change prototypes", {
   data(iris)
@@ -278,7 +202,7 @@ test_that("honeycombHIVE fails gracefully with invalid refineLoss for given task
   data(iris)
   X <- as.matrix(iris[,1:4])
   y <- iris$Species
-  
+
   expect_error({
     honeycombHIVE(
       X = X,
@@ -286,12 +210,12 @@ test_that("honeycombHIVE fails gracefully with invalid refineLoss for given task
       task = "classification",
       layers = 1,
       refine = TRUE,
-      refineLoss = "huber",  
+      refineLoss = "bogus_loss",
       refineSteps = 3,
       refineLR = 0.01,
       verbose = FALSE
     )
-  }, regexp="Invalid refineLoss 'huber' for task 'classification'. Supported losses: categorical_crossentropy, binary_crossentropy, kullback_leibler")
+  }, regexp="Invalid refineLoss 'bogus_loss' for task 'classification'")
 })
 
 test_that("honeycombHIVE clustering works with refine=TRUE, default refineLoss=mae", {
@@ -388,64 +312,10 @@ test_that("honeycombHIVE classification: refine=TRUE with cross_entropy", {
   expect_false(isTRUE(all.equal(final_no_ref, final_ref)))
 })
 
-test_that("honeycombHIVE regression: refine=TRUE with mse refineLoss", {
-  if (!requireNamespace("MASS", quietly=TRUE)) {
-    install.packages("MASS")
-  }
-  library(MASS)
-  data(Boston)
-  
-  X <- as.matrix(Boston[, -14])
-  y <- Boston$medv
-  
-  # Non-refined 
-  res_no_ref <- honeycombHIVE(
-    X = X,
-    y = y,
-    task = "regression",
-    layers = 2,
-    nAntibodies = 10,
-    maxIter = 5,
-    refine = FALSE,
-    verbose = FALSE
-  )
-  
-  # Refined
-  res_ref <- honeycombHIVE(
-    X = X,
-    y = y,
-    task = "regression",
-    layers = 2,
-    nAntibodies = 10,
-    maxIter = 5,
-    refine = TRUE,
-    refineLoss = "mse",
-    refineSteps = 3,
-    refineLR = 0.005,
-    verbose = FALSE
-  )
-  
-  # Check structure
-  expect_length(res_ref, 2)
-  for (ly in res_ref) {
-    expect_true("antibodies"  %in% names(ly))
-    expect_true("assignments" %in% names(ly))   
-    expect_true("predictions" %in% names(ly))   
-    expect_true("membership"  %in% names(ly))
-    expect_equal(ly$task, "regression")
-  }
-  
-  # Compare final prototypes
-  final_no_ref <- res_no_ref[[2]]$antibodies
-  final_ref    <- res_ref[[2]]$antibodies
-  expect_false(isTRUE(all.equal(final_no_ref, final_ref)))
-  
-})
-
 test_that("honeycombHIVE refineSteps=0 yields same result as refine=FALSE", {
   data(iris)
   X <- as.matrix(iris[,1:4])
-  
+
   set.seed(42)
   # refine=FALSE
   res_no_ref <- honeycombHIVE(
@@ -457,7 +327,7 @@ test_that("honeycombHIVE refineSteps=0 yields same result as refine=FALSE", {
     refine = FALSE,
     verbose = FALSE
   )
-  
+
   set.seed(42)
   res_steps0 <- honeycombHIVE(
     X = X,
@@ -466,42 +336,15 @@ test_that("honeycombHIVE refineSteps=0 yields same result as refine=FALSE", {
     nAntibodies = 6,
     maxIter = 3,
     refine = TRUE,
-    refineLoss = "mse",   
+    refineLoss = "mae",
     refineSteps = 0,
     refineLR = 0.01,
     verbose = FALSE
   )
-  
+
   # Compare final prototypes
   final_no_ref <- res_no_ref[[1]]$antibodies
   final_steps0 <- res_steps0[[1]]$antibodies
-  
-  expect_equal(final_no_ref, final_steps0, tolerance=1e-14)
-})
 
-test_that("honeycombHIVE refineLoss mismatch: attempts cross_entropy in regression => should error or fallback", {
-  if (!requireNamespace("MASS", quietly=TRUE)) {
-    install.packages("MASS")
-  }
-  library(MASS)
-  data(Boston)
-  X <- as.matrix(Boston[, -14])
-  y <- Boston$medv
-  
-  expect_error(
-    honeycombHIVE(
-      X = X,
-      y = y,
-      task = "regression",
-      layers = 1,
-      nAntibodies = 5,
-      maxIter = 2,
-      refine = TRUE,
-      refineLoss = "categorical_crossentropy",
-      refineSteps = 2,
-      refineLR = 0.01,
-      verbose = FALSE
-    ),
-    "Invalid refineLoss 'categorical_crossentropy' for task 'regression'. Supported losses: mse, mae, huber, kullback_leibler"
-  )
+  expect_equal(final_no_ref, final_steps0, tolerance=1e-14)
 })

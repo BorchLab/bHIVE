@@ -50,8 +50,8 @@
 #'   For bHIVE outputs, default is \code{1}. For multilayer honeycombHIVE 
 #'   outputs, specify one or more layer indices.
 #' @param task Character. The prediction task for the result: one of
-#'  \code{"clustering"}, \code{"classification"},
-#'   or \code{"regression"}. This is used to determine how grouping is computed.
+#'  \code{"clustering"} or \code{"classification"}. This is used to determine
+#'  how grouping is computed.
 #' @param ... Additional arguments passed to PCA, tSNE, UMAP, or ggplot functions.
 #'
 #' @return A \code{ggplot} object representing the visualization.
@@ -87,15 +87,7 @@
 #'               layer = 1,
 #'               task = "classification")
 #'
-#' # For regression: prototype grouping is overridden to a constant.
-#' visualizeHIVE(result = res,
-#'               X = iris[, 1:4],
-#'               plot_type = "density",
-#'               feature = "Sepal.Width",
-#'               title = "Sepal Width Density (Layer 1)",
-#'               layer = 1,
-#'               task = "regression")
-#'               
+
 #' @importFrom viridis scale_color_viridis scale_fill_viridis
 #' @importFrom Rtsne Rtsne
 #' @importFrom umap umap
@@ -110,7 +102,7 @@ visualizeHIVE <- function(result,
                           transformation_method = c("PCA", "UMAP", "tSNE", "none"),
                           title = "HIVE Results", 
                           layer = 1,
-                          task = c("clustering", "classification", "regression"),
+                          task = c("clustering", "classification"),
                           ...) {
   
   plot_type <- match.arg(plot_type)
@@ -132,37 +124,26 @@ visualizeHIVE <- function(result,
     stop("Invalid result object format.")
   }
   
-  ### BUILD PROTOTYPE DATA FRAME FOR CLASSIFICATION
-  if (task %in% c("classification", "clustering")) {
-    # Compute prototype group as the mode of the predicted classes for each cluster.
-    proto_list <- lapply(seq_along(selectedLayers), function(i) {
-      layer_i <- selectedLayers[[i]]
-      protos <- as.data.frame(layer_i$antibodies)
-      # If X has column names and the dimensions match, assign them to protos:
-      if (!is.null(X) && ncol(protos) == ncol(X) && !is.null(colnames(X))) {
-        colnames(protos)[seq_len(ncol(X))] <- colnames(X)
-      }
-      protos$Layer <- layer_labels[i]
-      proto_grp <- vapply(seq_len(nrow(protos)), function(j) {
-        dists <- apply(as.matrix(X), 1, function(x) {
-          sqrt(sum((x - as.numeric(protos[j, seq_len(ncol(X))]))^2))
-        })
-        nearest_index <- which.min(dists)
-        return(as.character(layer_i$assignments[nearest_index]))
-      }, character(1))
-      protos$Group <- factor(proto_grp, levels = unique(proto_grp))
-      protos
-    })
-    proto_all <- do.call(rbind, proto_list)
-  } else if (task == "regression") {
-    proto_all <- do.call(rbind, lapply(seq_along(selectedLayers), function(i) {
-      layer_i <- selectedLayers[[i]]
-      protos <- as.data.frame(layer_i$antibodies)
-      protos$Layer <- layer_labels[i]
-      protos$Group <- factor(rep("All", nrow(protos)))
-      protos
-    }))
-  }
+  ### BUILD PROTOTYPE DATA FRAME
+  proto_list <- lapply(seq_along(selectedLayers), function(i) {
+    layer_i <- selectedLayers[[i]]
+    protos <- as.data.frame(layer_i$antibodies)
+    # If X has column names and the dimensions match, assign them to protos:
+    if (!is.null(X) && ncol(protos) == ncol(X) && !is.null(colnames(X))) {
+      colnames(protos)[seq_len(ncol(X))] <- colnames(X)
+    }
+    protos$Layer <- layer_labels[i]
+    proto_grp <- vapply(seq_len(nrow(protos)), function(j) {
+      dists <- apply(as.matrix(X), 1, function(x) {
+        sqrt(sum((x - as.numeric(protos[j, seq_len(ncol(X))]))^2))
+      })
+      nearest_index <- which.min(dists)
+      return(as.character(layer_i$assignments[nearest_index]))
+    }, character(1))
+    protos$Group <- factor(proto_grp, levels = unique(proto_grp))
+    protos
+  })
+  proto_all <- do.call(rbind, proto_list)
   
   # Helper function: apply transformation to data matrix 'dat'
   transform_data <- function(dat) {
@@ -187,16 +168,12 @@ visualizeHIVE <- function(result,
     data_list <- lapply(seq_along(selectedLayers), function(i) {
       layer_i <- selectedLayers[[i]]
       # For scatterplots, use membership or predictions from the result.
-      if (task %in% c("classification", "clustering")) {
-        if (!is.null(layer_i$membership) && length(layer_i$membership) == nrow(X)) {
-          grp <- as.factor(layer_i$membership)
-        } else if (!is.null(layer_i$predictions) && length(layer_i$predictions) == nrow(X)) {
-          grp <- as.factor(layer_i$predictions)
-        } else {
-          grp <- factor(rep(NA, nrow(X)))
-        }
-      } else if (task == "regression") {
-        grp <- factor(rep("All", nrow(X)))
+      if (!is.null(layer_i$membership) && length(layer_i$membership) == nrow(X)) {
+        grp <- as.factor(layer_i$membership)
+      } else if (!is.null(layer_i$predictions) && length(layer_i$predictions) == nrow(X)) {
+        grp <- as.factor(layer_i$predictions)
+      } else {
+        grp <- factor(rep(NA, nrow(X)))
       }
       if (transform && ncol(X) > 2 && transformation_method != "none") {
         X_trans <- transform_data(X)
@@ -222,20 +199,16 @@ visualizeHIVE <- function(result,
                             Layer = proto_all$Layer)
     
     p <- ggplot() +
-      geom_point(data = df_points, 
+      geom_point(data = df_points,
                  aes(x = PC1, y = PC2, color = Group),
                  alpha = 0.6, size = 2) +
-      geom_point(data = df_protos, 
+      geom_point(data = df_protos,
                  aes(x = PC1, y = PC2),
                  color = "black", size = 4) +
       labs(title = title, x = "Component 1", y = "Component 2") +
-      theme_minimal()
-    
-    if (task == "regression") {
-      p <- p + scale_color_gradient(low = "blue", high = "red")
-    } else {
-      p <- p + scale_color_viridis(discrete = TRUE)
-    }
+      theme_minimal() +
+      scale_color_viridis(discrete = TRUE)
+
     if (length(unique(df_protos$Layer)) > 1)
       p <- p + facet_wrap(~Layer)
     return(p)
@@ -247,8 +220,6 @@ visualizeHIVE <- function(result,
     # For data points in classification, use the assignments from the first layer.
     if (task == "classification") {
       grouping <- as.factor(selectedLayers[[1]]$assignments)
-    } else if (task == "regression") {
-      grouping <- factor(rep("All", nrow(X)))
     } else {
       group_list <- lapply(seq_along(selectedLayers), function(i) {
         layer_i <- selectedLayers[[i]]

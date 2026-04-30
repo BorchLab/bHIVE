@@ -11,18 +11,18 @@
 
 ### Overview
 
-**bHIVE** is an R package implementing a modular Artificial Immune System (AIS) framework for clustering, classification, and regression. Built on [AI-Net](https://www.dca.fee.unicamp.br/~vonzuben/research/lnunes_dout/artigos/DMHA.PDF) (de Castro & Von Zuben 2001), bHIVE extends the classical algorithm with biologically-grounded modules drawn from modern immunology: somatic hypermutation, idiotypic network regulation, germinal center selection, and microenvironment-driven adaptation.
+**bHIVE** is an R package implementing a modular Artificial Immune System (AIS) framework for clustering and classification. Built on [AI-Net](https://www.dca.fee.unicamp.br/~vonzuben/research/lnunes_dout/artigos/DMHA.PDF) (de Castro & Von Zuben 2001), bHIVE extends the classical algorithm with biologically-grounded modules drawn from modern immunology: somatic hypermutation, idiotypic network regulation, germinal center selection, and microenvironment-driven adaptation.
 
 Performance-critical operations (affinity/distance matrices, clonal selection, network suppression, mutation) are implemented in C++ via [RcppArmadillo](https://cran.r-project.org/package=RcppArmadillo), with parallelization support through [BiocParallel](https://bioconductor.org/packages/BiocParallel/).
 
 ### Key Features
 
-- **Three tasks** -- clustering, classification, and regression on numeric matrices
+- **Two tasks** -- clustering and classification on numeric matrices
 - **C++ backend** -- BLAS-optimized bulk affinity/distance computation
 - **Two APIs** -- functional (`bHIVE()`) for quick use and R6 (`AINet$new()`) for full module composition
 - **Multilayer architecture** -- `honeycombHIVE()` for hierarchical prototype refinement across layers
 - **Hyperparameter tuning** -- `swarmbHIVE()` with grid search and BiocParallel
-- **Gradient refinement** -- `refineB()` post-processing with 5 optimizers and 8 loss functions
+- **Gradient refinement** -- `refineB()` post-processing with 5 optimizers and several classification-aware loss functions
 - **Composable immune modules** -- mix and match biological mechanisms via dependency injection
 - **caret compatible** -- `bHIVEmodel` and `honeycombHIVEmodel` for cross-validation workflows
 
@@ -51,11 +51,6 @@ table(res$assignments)
 res <- bHIVE(X, y = iris$Species, task = "classification",
              nAntibodies = 30, maxIter = 20)
 table(Predicted = res$assignments, Actual = iris$Species)
-
-# Regression
-res <- bHIVE(X[, 2:4], y = iris$Sepal.Length, task = "regression",
-             nAntibodies = 30, maxIter = 20)
-cor(res$predictions, iris$Sepal.Length)
 ```
 
 ### R6 API with Modules

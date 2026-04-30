@@ -126,7 +126,6 @@ honeycombHIVE
 honeycombHIVEmodel
 hotspot
 hotspots
-huber
 hypermutation
 idiotype
 idiotypic
@@ -150,13 +149,11 @@ mathbf
 mathcal
 maxClones
 medoid
-medv
 microenvironment
 microenvironments
 microstructure
 minkowski
 monomeric
-mse
 mucosal
 multilayer
 mut
@@ -173,14 +170,12 @@ paratope
 pca
 pentameric
 pkgdown
-poisson
 pred
 propto
 quadratically
 refineB
 responder
 rfloor
-rmse
 rmsprop
 roxygen
 runif
