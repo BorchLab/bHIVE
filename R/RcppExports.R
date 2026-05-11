@@ -13,8 +13,8 @@ compute_pairwise_distance <- function(A, dist_type, p, Sigma_inv) {
     .Call(`_bHIVE_compute_pairwise_distance`, A, dist_type, p, Sigma_inv)
 }
 
-clonal_selection_iteration_cpp <- function(A, X, y_num, task_int, k, beta, maxClones, mutationDecay, mutationMin, iter, affinity_type, alpha, c_param, p_param, nClasses) {
-    .Call(`_bHIVE_clonal_selection_iteration_cpp`, A, X, y_num, task_int, k, beta, maxClones, mutationDecay, mutationMin, iter, affinity_type, alpha, c_param, p_param, nClasses)
+clonal_selection_iteration_cpp <- function(A, X, y_num, task_int, k, beta, maxClones, mutationDecay, mutationMin, iter, affinity_type, alpha, c_param, p_param, nClasses, shm_method, shm_c_rate, shm_temperature, shm_E_0, shm_base_rate, shm_beta1, shm_beta2, shm_adam_epsilon, m1_state, m2_state) {
+    .Call(`_bHIVE_clonal_selection_iteration_cpp`, A, X, y_num, task_int, k, beta, maxClones, mutationDecay, mutationMin, iter, affinity_type, alpha, c_param, p_param, nClasses, shm_method, shm_c_rate, shm_temperature, shm_E_0, shm_base_rate, shm_beta1, shm_beta2, shm_adam_epsilon, m1_state, m2_state)
 }
 
 final_assignment_cpp <- function(X, A, affinity_type, dist_type, task_int, alpha, c_param, p_param, Sigma_inv) {

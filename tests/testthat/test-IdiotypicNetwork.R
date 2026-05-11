@@ -32,7 +32,7 @@ test_that("IdiotypicNetwork regulate runs on a repertoire", {
   A <- matrix(rnorm(50), nrow = 10, ncol = 5)
   rep <- ImmuneRepertoire$new(A)
   idi <- IdiotypicNetwork$new(theta_low = 0.01, theta_high = 0.5)
-  idi$regulate(rep, "gaussian", list(alpha = 0.5))
+  suppressWarnings(idi$regulate(rep, "gaussian", list(alpha = 0.5)))
 
   expect_true(!is.null(idi$last_dynamics))
   expect_true(rep$size() <= 10)  # some may be removed
@@ -45,7 +45,7 @@ test_that("IdiotypicNetwork regulate modifies repertoire in place", {
   initial_size <- rep$size()
   idi <- IdiotypicNetwork$new(theta_low = 0.001, theta_high = 0.99,
                                survival_threshold = 0.1)
-  idi$regulate(rep, "gaussian", list(alpha = 1))
+  suppressWarnings(idi$regulate(rep, "gaussian", list(alpha = 1)))
   # Regulation happened; metadata should be in sync
 
   expect_equal(rep$size(), nrow(rep$metadata))
@@ -57,7 +57,7 @@ test_that("IdiotypicNetwork get_network returns matrix after regulation", {
   idi <- IdiotypicNetwork$new()
   expect_null(idi$get_network())
 
-  idi$regulate(rep, "gaussian")
+  suppressWarnings(idi$regulate(rep, "gaussian"))
   net <- idi$get_network()
   expect_true(is.matrix(net))
   expect_equal(nrow(net), 6)
@@ -70,7 +70,7 @@ test_that("IdiotypicNetwork get_population returns vector after regulation", {
   idi <- IdiotypicNetwork$new()
   expect_null(idi$get_population())
 
-  idi$regulate(rep, "gaussian")
+  suppressWarnings(idi$regulate(rep, "gaussian"))
   pop <- idi$get_population()
   expect_true(is.numeric(pop))
   expect_equal(length(pop), 6)
@@ -97,6 +97,6 @@ test_that("IdiotypicNetwork print works after regulation", {
   A <- matrix(rnorm(30), nrow = 6, ncol = 5)
   rep <- ImmuneRepertoire$new(A)
   idi <- IdiotypicNetwork$new()
-  idi$regulate(rep, "gaussian")
+  suppressWarnings(idi$regulate(rep, "gaussian"))
   expect_output(print(idi), "survived")
 })

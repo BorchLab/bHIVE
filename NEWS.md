@@ -1,3 +1,85 @@
+# bHIVE 0.99.3
+
+## Module Integration
+
+Modules previously accepted by `AINet$new()` were stored on the algorithm
+but never invoked by the fit loop. v0.99.3 wires every module into
+`AINet$fit()` so it affects predictions:
+
+* `init` (`VDJLibrary` or any object exposing `$generate(n, X)`) now
+  controls initial-repertoire construction. When supplied, it overrides
+  `initMethod`. This makes V(D)J combinatorial assembly the actual
+  starting state rather than dead metadata.
+* `idiotypic` (`IdiotypicNetwork`) is now invoked between clonal selection
+  and network suppression. The bell-curve `idiotypic_dynamics_cpp` kernel
+  culls antibodies in over-clumped niches (suppression) and isolated
+  antibodies (insufficient stimulation). A safety net keeps the top-10%
+  population when ill-tuned thresholds would kill every antibody, so the
+  iteration can continue and downstream selection can penalize the config.
+* `activation` (`ActivationGate`) now pre-screens antibodies in over-dense
+  feature-space neighborhoods *out* of each round of clonal selection.
+  Gated antibodies sit aside unchanged while selection runs on the sparse
+  subset, then rejoin the repertoire. In classification mode their class
+  labels are refreshed by majority-vote of their nearest data points so
+  pre-allocated random labels do not poison final predictions.
+* `microenvironment` (`Microenvironment`) is assessed each iteration after
+  clonal selection. Its `mutation_modifiers` scale a per-antibody Gaussian
+  jitter applied in feature units (`0.5%` of feature SD on iter 1,
+  decaying with `mutationDecay`). Sparse-region antibodies explore
+  outward, dense-region antibodies stabilize.
+* `germinalCenter` (`GerminalCenter`) now runs Tfh-mediated quality
+  selection after clonal-selection rejoin. Survivor indices are composed
+  across selection rounds and mirrored onto `antibody_classes` and the
+  adaptive-SHM moment matrices so external per-antibody state stays
+  aligned. `GerminalCenter$select()` now returns the composed survivor
+  vector (relative to the input repertoire) and exposes it as
+  `$last_survivors`.
+* `classSwitcher` (`ClassSwitcher`) runs after `microenvironment` and
+  binds each antibody's isotype (IgM/IgG/IgA) to its zone. The
+  population-mean per-isotype alpha is then used as the *next* iteration's
+  affinity kernel width, modulating matching breadth based on the current
+  density landscape. Requires `microenvironment` to be present.
+* `memory` (`MemoryPool`) is invoked at two points. Pre-iteration, in
+  clustering mode, relevant memory cells from prior fits are recalled
+  (via `recall(X)`) and merged into the starting repertoire so prior
+  knowledge seeds the search. Post-iteration, after orphan pruning, the
+  surviving high-affinity antibodies are archived back into the pool
+  (`archive()`) so they persist across fits. Classification archives also
+  attach `class_label` to repertoire metadata so future consumers can read
+  them back; recall is suppressed for classification to avoid label loss.
+* `shm` (`SHMEngine`) is now dispatched inside `clonal_selection_iteration_cpp`
+  rather than ignored. All five strategies — `uniform`, `airs`, `hotspot`,
+  `energy`, `adaptive` — produce distinct mutation behavior. The adaptive
+  strategy's Adam-style first/second moment matrices are threaded through
+  the C++ kernel and re-aligned in R after every subset/reorder operation
+  (activation gating, germinal-center selection, idiotypic culling,
+  network suppression) so per-antibody moment tracking stays consistent
+  across iterations.
+
+## C++ Backend
+
+* `clonal_selection_iteration_cpp` now accepts SHM dispatch parameters
+  (`shm_method`, `shm_c_rate`, `shm_temperature`, `shm_E_0`, `shm_base_rate`,
+  `shm_beta1`, `shm_beta2`, `shm_adam_epsilon`) plus adaptive moment
+  matrices `m1_state`/`m2_state`. The R wrapper provides defaults
+  (`shm_method = "uniform"`, empty state matrices) so legacy callers that
+  pass the original 15 arguments still get the previous behavior.
+* New `src/shm.h` exposes the five SHM strategy helpers and a
+  `mutate_by_method` dispatcher shared by `shm_mutate_cpp` and
+  `clonal_selection_iteration_cpp`. The helpers are no longer `static`.
+
+## New Behavior
+
+* Orphan-antibody pruning: `AINet$fit()` now drops surviving antibodies
+  that are not the nearest neighbor to any training point before computing
+  the final assignment. Eliminates ghost antibodies that pass suppression
+  but bind nothing, and tightens the relationship between cluster count
+  and effective antibody count.
+* `antibody_classes` is now pre-allocated before the iteration loop in
+  classification mode (uniform random over `levels(y)`), so the new
+  pre-selection gate logic has a value to index into on iteration 1
+  rather than referencing a not-yet-defined variable.
+
 # bHIVE 0.99.2
 
 ## Breaking Changes

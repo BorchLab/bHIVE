@@ -1,17 +1,20 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 #include "affinity_distance.h"
+#include "shm.h"
 
 // Core clonal selection + mutation loop for one iteration
 //
 // For each data point:
 //   1. Compute affinity to all antibodies (uses pre-computed affinity matrix)
 //   2. Identify top-k antibodies
-//   3. Clone and mutate top-k, keeping improvements
+//   3. Clone and mutate top-k via the SHM strategy `shm_method`, keeping
+//      improvements. Adaptive method threads m1_state/m2_state in/out.
 //   4. Accumulate task-specific statistics
 //
 // Returns a list with:
 //   - A: updated antibody matrix
 //   - class_counts: (classification) weighted vote matrix
+//   - m1_state, m2_state: updated moment matrices (adaptive SHM)
 //
 // [[Rcpp::export]]
 Rcpp::List clonal_selection_iteration_cpp(
@@ -29,7 +32,17 @@ Rcpp::List clonal_selection_iteration_cpp(
     double alpha,
     double c_param,
     double p_param,
-    int nClasses) {
+    int nClasses,
+    const std::string& shm_method,   // SHM strategy
+    double shm_c_rate,
+    double shm_temperature,
+    double shm_E_0,
+    double shm_base_rate,
+    double shm_beta1,
+    double shm_beta2,
+    double shm_adam_epsilon,
+    arma::mat m1_state,              // adaptive: (m x d) first moments
+    arma::mat m2_state) {            // adaptive: (m x d) second moments
 
   const arma::uword n = X.n_rows;
   const arma::uword m = A.n_rows;
@@ -37,18 +50,27 @@ Rcpp::List clonal_selection_iteration_cpp(
   const TaskType task = static_cast<TaskType>(task_int);
   const AffinityType aff_type = parse_affinity_type(affinity_type);
 
+  // Adaptive method requires (m x d) state. If caller passed empty
+  // matrices (e.g. SHM not adaptive), allocate zero state lazily so the
+  // dispatcher does not segfault on empty access.
+  const bool is_adaptive = (shm_method == "adaptive");
+  if (is_adaptive) {
+    if (m1_state.n_rows != m || m1_state.n_cols != d) {
+      m1_state = arma::zeros<arma::mat>(m, d);
+    }
+    if (m2_state.n_rows != m || m2_state.n_cols != d) {
+      m2_state = arma::zeros<arma::mat>(m, d);
+    }
+  }
+
   // Task-specific accumulators
   arma::mat class_counts;
-
   if (task == TaskType::CLASSIFICATION) {
     class_counts = arma::zeros<arma::mat>(m, nClasses);
   }
 
   // Compute full affinity matrix (n x m) -- the big BLAS win
   arma::mat aff_matrix = affinity_matrix_cpp(X, A, aff_type, alpha, c_param, p_param);
-
-  // Pre-compute decay factor for this iteration
-  const double decay_factor = std::pow(mutationDecay, iter - 1);
 
   // Process each data point
   for (arma::uword i = 0; i < n; ++i) {
@@ -83,18 +105,16 @@ Rcpp::List clonal_selection_iteration_cpp(
       if (nClonesInt <= 0) continue;
 
       for (int clone_id = 0; clone_id < nClonesInt; ++clone_id) {
-        // Decayed mutation rate
-        const double mutation_rate = std::max(
-          (1.0 - f_j) * decay_factor,
-          mutationMin
+        // Dispatch mutation by SHM method. mutationDecay and mutationMin
+        // are reused for uniform-style decay; other methods use their own
+        // parameters via shm_*.
+        arma::rowvec mutated = mutate_by_method(
+          shm_method, A.row(jj), x_i, f_j, iter,
+          mutationDecay, mutationMin,
+          shm_c_rate, shm_temperature, shm_E_0, shm_base_rate,
+          shm_beta1, shm_beta2, shm_adam_epsilon,
+          m1_state, m2_state, jj
         );
-
-        // Generate mutated antibody
-        arma::rowvec noise(d);
-        for (arma::uword dd = 0; dd < d; ++dd) {
-          noise(dd) = R::rnorm(0.0, mutation_rate);
-        }
-        const arma::rowvec mutated = A.row(jj) + noise;
 
         // Use scalar affinity (no matrix allocation in hot path)
         const double f_mutated = affinity_scalar_cpp(
@@ -104,7 +124,6 @@ Rcpp::List clonal_selection_iteration_cpp(
         if (std::isfinite(f_mutated) && f_mutated > f_j) {
           A.row(jj) = mutated;
           // Update the affinity column for this antibody going forward
-          // Use bulk computation since it updates for all n data points
           arma::mat mutated_mat(1, d);
           mutated_mat.row(0) = mutated;
           aff_matrix.col(jj) = affinity_matrix_cpp(X, mutated_mat, aff_type,
@@ -116,7 +135,9 @@ Rcpp::List clonal_selection_iteration_cpp(
 
   return Rcpp::List::create(
     Rcpp::Named("A") = A,
-    Rcpp::Named("class_counts") = class_counts
+    Rcpp::Named("class_counts") = class_counts,
+    Rcpp::Named("m1_state") = m1_state,
+    Rcpp::Named("m2_state") = m2_state
   );
 }
 

@@ -55,7 +55,7 @@ table(Predicted = res$assignments, Actual = iris$Species)
 
 ### R6 API with Modules
 
-For full control, compose an `AINet` with any combination of immune modules:
+For full control, compose an `AINet` with any combination of immune modules. Each module is optional and slots into the fit loop at the appropriate biological stage:
 
 ```r
 # Adaptive mutation + idiotypic network regulation
@@ -73,17 +73,44 @@ table(model$result$assignments)
 preds <- model$predict(X[1:10, ])
 ```
 
+A richer composition uses microenvironment-aware exploration, Tfh-mediated quality selection, density-driven isotype switching, and a persistent memory pool:
+
+```r
+me  <- Microenvironment$new()                              # zone classification
+cs  <- ClassSwitcher$new(alpha_IgM = 0.1, alpha_IgG = 5)   # zone -> kernel width
+gc  <- GerminalCenter$new(nTfh = 8, selectionPressure = 0.6)
+mp  <- MemoryPool$new(archive_threshold = 0.05)            # persists across fits
+
+model <- AINet$new(
+  nAntibodies = 30, maxIter = 20,
+  shm              = SHMEngine$new(method = "hotspot"),
+  microenvironment = me,
+  classSwitcher    = cs,            # requires microenvironment
+  germinalCenter   = gc,
+  memory           = mp,
+  verbose          = FALSE
+)
+model$fit(X, iris$Species, task = "classification")
+
+# Memory persists -- a second fit will recall relevant cells (clustering only)
+# and continue archiving high-affinity antibodies.
+mp$size()
+```
+
 ## Architecture
 
 ### Algorithm
 
-bHIVE evolves a population of antibody vectors to represent structure in data:
+bHIVE evolves a population of antibody vectors to represent structure in data. Each iteration runs a subset of the following stages — modules attach to specific stages and are skipped when absent:
 
-1. **Initialization** -- sample from data, random generation, kmeans++, or V(D)J combinatorial assembly
-2. **Affinity computation** -- bulk n x m matrix via BLAS (Gaussian, Laplace, polynomial, cosine, Hamming)
-3. **Clonal selection + mutation** -- top-k antibodies cloned; mutants generated via configurable SHM strategy
-4. **Network regulation** -- suppress redundant antibodies via distance threshold or idiotypic network dynamics
-5. **Final assignment** -- data points assigned to nearest antibody by affinity or distance
+1. **Initialization** (once) -- sample from data, random generation, kmeans++, or V(D)J combinatorial assembly via `VDJLibrary`. If a `MemoryPool` carries cells from a prior fit, relevant memory is recalled and merged into the starting repertoire (clustering only).
+2. **Activation gating** -- `ActivationGate` sets aside antibodies in over-dense neighborhoods or below an affinity floor so clonal selection runs on the sparse subset; gated antibodies rejoin after.
+3. **Clonal selection + SHM** -- top-k antibodies cloned per data point. Mutation dispatches through `SHMEngine` (`uniform`, `airs`, `hotspot`, `energy`, `adaptive`); the adaptive strategy threads per-antibody Adam-style moment matrices across iterations.
+4. **Germinal center selection** -- `GerminalCenter` runs Tfh-mediated quality selection; survivors weighted by clustering compactness or classification purity.
+5. **Microenvironment & class switching** -- `Microenvironment` classifies each antibody into stable / explore / boundary zones and applies density-dependent jitter. `ClassSwitcher` binds each zone to an isotype (IgM/IgG/IgA) and sets the next iteration's kernel width.
+6. **Idiotypic regulation** -- `IdiotypicNetwork` runs bell-shaped Ab-Ab dynamics that cull both over-clumped and isolated antibodies. Falls back to a top-population safety net if ill-tuned thresholds would kill the repertoire.
+7. **Network suppression** -- removes near-duplicate antibodies within an epsilon-ball under the chosen distance metric.
+8. **Orphan pruning + final assignment** (once) -- antibodies that bind no training point are dropped; remaining cells produce cluster IDs or class predictions. `MemoryPool` archives high-affinity survivors back into the pool.
 
 <img align="center" src="https://github.com/BorchLab/bHIVE/blob/main/www/iterativeGraphic.png">
 
