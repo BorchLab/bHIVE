@@ -438,14 +438,23 @@ test_that("ClassSwitcher updates isotypes when paired with Microenvironment", {
 # ==== SHM dispatch in clonal_selection ====
 
 test_that("Different SHM strategies produce different repertoires", {
+  # Use random_uniform init so antibodies start scattered across the
+  # feature bounding box. Initial affinities are low, mutation rates are
+  # consequently large, and many mutations get accepted — so the two SHM
+  # strategies (with their different rate formulas) diverge measurably.
+  # With "sample" init, antibodies clone data points (affinity ~ 1) and
+  # both strategies' rates collapse toward mutationMin, making the test
+  # sensitive to floating-point edge cases on the accept/reject boundary.
   set.seed(67)
   m_unif <- AINet$new(nAntibodies = 20, maxIter = 4, epsilon = 1e-6,
+                      initMethod = "random_uniform",
                       shm = SHMEngine$new(method = "uniform"),
                       verbose = FALSE)
   m_unif$fit(X, task = "clustering")
 
   set.seed(67)
   m_airs <- AINet$new(nAntibodies = 20, maxIter = 4, epsilon = 1e-6,
+                      initMethod = "random_uniform",
                       shm = SHMEngine$new(method = "airs",
                                           temperature = 0.2, c_rate = 0.5),
                       verbose = FALSE)
