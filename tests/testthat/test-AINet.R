@@ -438,37 +438,37 @@ test_that("ClassSwitcher updates isotypes when paired with Microenvironment", {
 # ==== SHM dispatch in clonal_selection ====
 
 test_that("Different SHM strategies produce different repertoires", {
-  # Use random_uniform init so antibodies start scattered across the
-  # feature bounding box. Initial affinities are low, mutation rates are
-  # consequently large, and many mutations get accepted — so the two SHM
-  # strategies (with their different rate formulas) diverge measurably.
-  # With "sample" init, antibodies clone data points (affinity ~ 1) and
-  # both strategies' rates collapse toward mutationMin, making the test
-  # sensitive to floating-point edge cases on the accept/reject boundary.
-  set.seed(67)
-  m_unif <- AINet$new(nAntibodies = 20, maxIter = 4, epsilon = 1e-6,
-                      initMethod = "random_uniform",
-                      shm = SHMEngine$new(method = "uniform"),
-                      verbose = FALSE)
-  m_unif$fit(X, task = "clustering")
+  # Drive the SHM dispatcher directly via shm_mutate_cpp on a single
+  # antibody / data-point pair with low affinity. Bypasses the AINet
+  # loop machinery (early stopping, network suppression, gating) so the
+  # assertion only depends on the SHM dispatch, which is what we want
+  # to verify. Seed reset before each call -> R::rnorm consumes the
+  # same standard-normal stream, scaled by each method's rate formula,
+  # producing materially different mutations.
+  A   <- matrix(c(10, 10, 10, 10), nrow = 1)   # far from any iris point
+  Xd  <- matrix(c(5.1, 3.5, 1.4, 0.2), nrow = 1)
+  aff <- 0.0                                   # forces large mutation rates
 
-  set.seed(67)
-  m_airs <- AINet$new(nAntibodies = 20, maxIter = 4, epsilon = 1e-6,
-                      initMethod = "random_uniform",
-                      shm = SHMEngine$new(method = "airs",
-                                          temperature = 0.2, c_rate = 0.5),
-                      verbose = FALSE)
-  m_airs$fit(X, task = "clustering")
-
-  A_u <- m_unif$repertoire$as_matrix()
-  A_a <- m_airs$repertoire$as_matrix()
-  # Different SHM strategies must produce different antibody coordinates
-  # (size match would still permit equality only if results are identical).
-  if (nrow(A_u) == nrow(A_a)) {
-    expect_false(isTRUE(all.equal(A_u, A_a)))
-  } else {
-    succeed("SHM strategy changed surviving repertoire size")
+  call_dispatch <- function(method, c_rate = 1.0, temperature = 0.5) {
+    set.seed(67)
+    shm_mutate_cpp(
+      A, Xd, affinities = aff,
+      top_k_indices = 0L, data_indices = 0L,
+      method = method, iter = 1L,
+      decay = 1.0, mutationMin = 0.01,
+      c_rate = c_rate, temperature = temperature,
+      E_0 = 1.0, base_rate = 0.1,
+      beta1 = 0.9, beta2 = 0.999, adam_epsilon = 1e-8,
+      m1_state = matrix(0, 0, 0), m2_state = matrix(0, 0, 0),
+      affinity_type = "gaussian",
+      aff_alpha = 1.0, aff_c = 1.0, aff_p = 2.0
+    )$A
   }
+  A_u <- call_dispatch("uniform")
+  A_a <- call_dispatch("airs", c_rate = 0.5, temperature = 0.2)
+
+  expect_false(isTRUE(all.equal(A_u, A_a)))
+  expect_gt(max(abs(A_u - A_a)), 1e-3)
 })
 
 test_that("AINet runs end-to-end with adaptive SHM (moment state tracking)", {
