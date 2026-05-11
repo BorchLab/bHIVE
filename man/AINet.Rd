@@ -74,6 +74,7 @@ Create a new AINet algorithm instance.
   germinalCenter = NULL,
   microenvironment = NULL,
   memory = NULL,
+  classSwitcher = NULL,
   verbose = TRUE
 )}\if{html}{\out{</div>}}
 }
@@ -122,6 +123,8 @@ Create a new AINet algorithm instance.
 \item{\code{microenvironment}}{A Microenvironment instance or NULL.}
 
 \item{\code{memory}}{A MemoryPool instance or NULL.}
+
+\item{\code{classSwitcher}}{A ClassSwitcher instance or NULL.}
 
 \item{\code{verbose}}{Logical. Print progress.}
 }
