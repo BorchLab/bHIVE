@@ -58,8 +58,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // clonal_selection_iteration_cpp
-Rcpp::List clonal_selection_iteration_cpp(arma::mat A, const arma::mat& X, const arma::vec& y_num, int task_int, int k, double beta, double maxClones, double mutationDecay, double mutationMin, int iter, const std::string& affinity_type, double alpha, double c_param, double p_param, int nClasses);
-RcppExport SEXP _bHIVE_clonal_selection_iteration_cpp(SEXP ASEXP, SEXP XSEXP, SEXP y_numSEXP, SEXP task_intSEXP, SEXP kSEXP, SEXP betaSEXP, SEXP maxClonesSEXP, SEXP mutationDecaySEXP, SEXP mutationMinSEXP, SEXP iterSEXP, SEXP affinity_typeSEXP, SEXP alphaSEXP, SEXP c_paramSEXP, SEXP p_paramSEXP, SEXP nClassesSEXP) {
+Rcpp::List clonal_selection_iteration_cpp(arma::mat A, const arma::mat& X, const arma::vec& y_num, int task_int, int k, double beta, double maxClones, double mutationDecay, double mutationMin, int iter, const std::string& affinity_type, double alpha, double c_param, double p_param, int nClasses, const std::string& shm_method, double shm_c_rate, double shm_temperature, double shm_E_0, double shm_base_rate, double shm_beta1, double shm_beta2, double shm_adam_epsilon, arma::mat m1_state, arma::mat m2_state);
+RcppExport SEXP _bHIVE_clonal_selection_iteration_cpp(SEXP ASEXP, SEXP XSEXP, SEXP y_numSEXP, SEXP task_intSEXP, SEXP kSEXP, SEXP betaSEXP, SEXP maxClonesSEXP, SEXP mutationDecaySEXP, SEXP mutationMinSEXP, SEXP iterSEXP, SEXP affinity_typeSEXP, SEXP alphaSEXP, SEXP c_paramSEXP, SEXP p_paramSEXP, SEXP nClassesSEXP, SEXP shm_methodSEXP, SEXP shm_c_rateSEXP, SEXP shm_temperatureSEXP, SEXP shm_E_0SEXP, SEXP shm_base_rateSEXP, SEXP shm_beta1SEXP, SEXP shm_beta2SEXP, SEXP shm_adam_epsilonSEXP, SEXP m1_stateSEXP, SEXP m2_stateSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -78,7 +78,17 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type c_param(c_paramSEXP);
     Rcpp::traits::input_parameter< double >::type p_param(p_paramSEXP);
     Rcpp::traits::input_parameter< int >::type nClasses(nClassesSEXP);
-    rcpp_result_gen = Rcpp::wrap(clonal_selection_iteration_cpp(A, X, y_num, task_int, k, beta, maxClones, mutationDecay, mutationMin, iter, affinity_type, alpha, c_param, p_param, nClasses));
+    Rcpp::traits::input_parameter< const std::string& >::type shm_method(shm_methodSEXP);
+    Rcpp::traits::input_parameter< double >::type shm_c_rate(shm_c_rateSEXP);
+    Rcpp::traits::input_parameter< double >::type shm_temperature(shm_temperatureSEXP);
+    Rcpp::traits::input_parameter< double >::type shm_E_0(shm_E_0SEXP);
+    Rcpp::traits::input_parameter< double >::type shm_base_rate(shm_base_rateSEXP);
+    Rcpp::traits::input_parameter< double >::type shm_beta1(shm_beta1SEXP);
+    Rcpp::traits::input_parameter< double >::type shm_beta2(shm_beta2SEXP);
+    Rcpp::traits::input_parameter< double >::type shm_adam_epsilon(shm_adam_epsilonSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type m1_state(m1_stateSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type m2_state(m2_stateSEXP);
+    rcpp_result_gen = Rcpp::wrap(clonal_selection_iteration_cpp(A, X, y_num, task_int, k, beta, maxClones, mutationDecay, mutationMin, iter, affinity_type, alpha, c_param, p_param, nClasses, shm_method, shm_c_rate, shm_temperature, shm_E_0, shm_base_rate, shm_beta1, shm_beta2, shm_adam_epsilon, m1_state, m2_state));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -187,7 +197,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bHIVE_compute_affinity_matrix", (DL_FUNC) &_bHIVE_compute_affinity_matrix, 6},
     {"_bHIVE_compute_distance_matrix", (DL_FUNC) &_bHIVE_compute_distance_matrix, 5},
     {"_bHIVE_compute_pairwise_distance", (DL_FUNC) &_bHIVE_compute_pairwise_distance, 4},
-    {"_bHIVE_clonal_selection_iteration_cpp", (DL_FUNC) &_bHIVE_clonal_selection_iteration_cpp, 15},
+    {"_bHIVE_clonal_selection_iteration_cpp", (DL_FUNC) &_bHIVE_clonal_selection_iteration_cpp, 25},
     {"_bHIVE_final_assignment_cpp", (DL_FUNC) &_bHIVE_final_assignment_cpp, 9},
     {"_bHIVE_init_kmeanspp_cpp", (DL_FUNC) &_bHIVE_init_kmeanspp_cpp, 2},
     {"_bHIVE_idiotypic_dynamics_cpp", (DL_FUNC) &_bHIVE_idiotypic_dynamics_cpp, 12},
