@@ -114,7 +114,9 @@ test_that("clonal_selection_iteration_cpp runs for clustering", {
   y_num <- rep(0, 150)
   result <- clonal_selection_iteration_cpp(
     A, X, y_num, 0L, 3L, 5.0, Inf, 1.0, 0.01, 1L,
-    "gaussian", 1.0, 1.0, 2.0, 0L
+    "gaussian", 1.0, 1.0, 2.0, 0L,
+    "uniform", 1.0, 0.5, 1.0, 0.1, 0.9, 0.999, 1e-8,
+    matrix(0, 0, 0), matrix(0, 0, 0)
   )
   expect_true(is.matrix(result$A))
   expect_equal(ncol(result$A), 4)
@@ -126,7 +128,9 @@ test_that("clonal_selection_iteration_cpp runs for classification", {
   y_num <- as.numeric(iris$Species) - 1
   result <- clonal_selection_iteration_cpp(
     A, X, y_num, 1L, 3L, 5.0, Inf, 1.0, 0.01, 1L,
-    "gaussian", 1.0, 1.0, 2.0, 3L
+    "gaussian", 1.0, 1.0, 2.0, 3L,
+    "uniform", 1.0, 0.5, 1.0, 0.1, 0.9, 0.999, 1e-8,
+    matrix(0, 0, 0), matrix(0, 0, 0)
   )
   expect_true(is.matrix(result$A))
   expect_true(!is.null(result$class_counts))

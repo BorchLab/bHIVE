@@ -1,7 +1,7 @@
 # test script for bHIVEmodel.R - testcases are NOT comprehensive!
 
 set.seed(42)
-library(caret)
+suppressWarnings(suppressPackageStartupMessages(library(caret)))
 
 test_that("bHIVEmodel integrates with caret for classification", {
   data(iris)
