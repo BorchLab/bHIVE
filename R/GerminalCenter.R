@@ -44,6 +44,10 @@ GerminalCenter <- R6::R6Class(
     #' @field rounds Number of selection rounds per call.
     rounds = NULL,
 
+    #' @field last_survivors Integer vector of survivor indices (relative
+    #'   to the input repertoire) from the most recent call to \code{select()}.
+    last_survivors = NULL,
+
     #' @description Create a new GerminalCenter.
     #' @param nTfh Integer. Number of Tfh helper cells. Each helps one B cell.
     #' @param selectionPressure Numeric [0,1]. Stringency of selection.
@@ -66,10 +70,18 @@ GerminalCenter <- R6::R6Class(
     #' @param task Character: "clustering" or "classification".
     #' @param affinityFunc Character. Affinity function for evaluation.
     #' @param affinityParams List. Parameters for affinity function.
-    #' @return Invisible self. Repertoire modified in place.
+    #' @return Integer vector of survivor indices relative to the input
+    #'   repertoire (composed across all selection rounds). Also stored on
+    #'   \code{self$last_survivors} for inspection. Repertoire is modified
+    #'   in place.
     select = function(repertoire, X, y = NULL, task = "clustering",
                       affinityFunc = "gaussian",
                       affinityParams = list(alpha = 1, c = 1, p = 2)) {
+
+      # Track survivor indices composed across rounds so callers can
+      # mirror the subset onto external per-antibody state (e.g. class
+      # labels, SHM moment matrices).
+      current <- seq_len(repertoire$size())
 
       for (round in seq_len(self$rounds)) {
         m <- repertoire$size()
@@ -91,9 +103,11 @@ GerminalCenter <- R6::R6Class(
         survived <- sort(unique(sample.int(m, size = n_survive, replace = FALSE, prob = probs)))
 
         repertoire$subset(survived)
+        current <- current[survived]
       }
 
-      invisible(self)
+      self$last_survivors <- current
+      invisible(current)
     },
 
     #' @description Print summary.

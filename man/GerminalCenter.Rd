@@ -39,6 +39,9 @@ rep$size()  # fewer antibodies after selection
 1 = only the very best survive.}
 
 \item{\code{rounds}}{Number of selection rounds per call.}
+
+\item{\code{last_survivors}}{Integer vector of survivor indices (relative
+to the input repertoire) from the most recent call to \code{select()}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -106,7 +109,10 @@ Run germinal center selection on a repertoire.
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Invisible self. Repertoire modified in place.
+Integer vector of survivor indices relative to the input
+  repertoire (composed across all selection rounds). Also stored on
+  \code{self$last_survivors} for inspection. Repertoire is modified
+  in place.
 }
 }
 \if{html}{\out{<hr>}}
