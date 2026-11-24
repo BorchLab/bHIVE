@@ -1,3 +1,28 @@
+# bHIVE 0.99.9
+
+## Bug fixes
+* The polynomial affinity is now bounded:
+  `[(x.a + c) / max(x.x + c, a.a + c)]^p`, which lies in [0, 1] and is
+  largest at `a = x`. The raw kernel `(x.a + c)^p` grows without limit as an
+  antibody gets longer, which broke the fit in three ways:
+  * Every SHM method sizes its step from an affinity it assumes lies in
+    [0, 1]. With values in the thousands, `"energy"` mutation took huge steps
+    and `"adaptive"` mutation's learning rate turned large and negative.
+  * Mutants are kept when they raise affinity, so antibodies grew without
+    bound (to 1e49-1e137 within 20 iterations on data scaled to [0, 1]).
+    With `"energy"` or `"adaptive"` this ended in
+    `sort_index(): detected NaN` or in a repertoire of two unassigned
+    antibodies.
+  * Top-k selection, class voting and `predict()` favoured whichever
+    antibody was longest. On a 6-class, 20-marker simulation, polynomial
+    classification sat at chance (balanced accuracy 0.17) under the default
+    `"uniform"` SHM and under `"energy"` and `"adaptive"`. It now scores
+    0.82 to 1.00 under all five SHM methods.
+
+  Fits with the polynomial kernel therefore change. No other kernel is
+  affected: fits with the Gaussian, Laplace, cosine and Hamming kernels are
+  bit-identical to 0.99.8.
+
 # bHIVE 0.99.8
 
 Changes in response to the first round of Bioconductor review.

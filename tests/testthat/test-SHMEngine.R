@@ -109,3 +109,38 @@ test_that("SHMEngine integrates with AINet for all methods", {
     expect_equal(model$modules$shm$method, m)
   }
 })
+
+# ==== Regression: polynomial affinity with every SHM method ====
+
+test_that("polynomial affinity fits with every SHM method", {
+  # bHIVE 0.99.8: polynomial with energy or adaptive SHM stopped with
+  # "sort_index(): detected NaN" or kept 2 antibodies, because the raw kernel
+  # is unbounded and the step sizes assume affinity in [0, 1]. Under uniform
+  # SHM, polynomial classification sat at chance. Antibodies must now stay
+  # on the data's scale and the fit must classify.
+  set.seed(1)
+  d <- 20; k <- 6; n <- 900
+  centers <- matrix(runif(k * d), k)
+  y <- factor(sample(seq_len(k), n, replace = TRUE))
+  X <- centers[as.integer(y), ] + matrix(rnorm(n * d, sd = 0.08), ncol = d)
+  X <- apply(X, 2, function(v) (v - min(v)) / (max(v) - min(v)))
+  tr <- seq_len(600); te <- 601:n
+  bal_acc <- function(t, p) mean(vapply(levels(t),
+                                        function(l) mean(p[t == l] == l), 0))
+
+  for (m in c("uniform", "airs", "hotspot", "energy", "adaptive")) {
+    set.seed(42)
+    model <- AINet$new(nAntibodies = 30, maxIter = 15,
+                       affinityFunc = "polynomial",
+                       affinityParams = list(alpha = 1, c = 1, p = 3),
+                       shm = SHMEngine$new(method = m), verbose = FALSE)
+    suppressWarnings(suppressMessages(
+      model$fit(X[tr, ], y[tr], task = "classification")))
+    A <- model$result$antibodies
+    expect_true(all(is.finite(A)), label = m)
+    expect_gt(nrow(A), 2L, label = m)
+    expect_lt(max(abs(A)), 5, label = m)
+    pred <- factor(model$predict(X[te, ]), levels = levels(y))
+    expect_gt(bal_acc(y[te], pred), 0.5, label = m)
+  }
+})

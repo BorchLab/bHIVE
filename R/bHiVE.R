@@ -96,7 +96,10 @@
 #'     \item \code{alpha} (for RBF or Laplace kernel). \code{"auto"} sets the
 #'     bandwidth by the median heuristic, which is recommended for
 #'     high-dimensional data such as mass cytometry.
-#'     \item \code{c}, \code{p} (for polynomial kernel or Minkowski distance),
+#'     \item \code{c}, \code{p} (for polynomial kernel or Minkowski distance).
+#'     The polynomial affinity is the bounded form
+#'     \eqn{[(x \cdot a + c) / \max(x \cdot x + c, a \cdot a + c)]^p}, which
+#'     lies in [0, 1] and peaks at \eqn{a = x}.
 #'     \item \code{Sigma} (for Mahalanobis distance).
 #'   }
 #' @param mutationDecay Numeric. Factor by which the mutation rate decays each

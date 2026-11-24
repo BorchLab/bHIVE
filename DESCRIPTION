@@ -1,6 +1,6 @@
 Package: bHIVE
 Title: B-cell Hybrid Immune Variant Engine
-Version: 0.99.8
+Version: 0.99.9
 Authors@R: c(
     person(given = "Nick", family = "Borcherding", role = c("aut", "cre"),
            email = "ncborch@gmail.com",

@@ -73,12 +73,20 @@ outliers.
 
 ### Polynomial
 
-$$f_{\text{poly}}(\mathbf{x}, \mathbf{a}) = (\mathbf{x} \cdot \mathbf{a} + c)^p$$
+$$f_{\text{poly}}(\mathbf{x}, \mathbf{a}) =
+\left[\frac{\mathbf{x} \cdot \mathbf{a} + c}
+{\max(\mathbf{x} \cdot \mathbf{x} + c,\ \mathbf{a} \cdot \mathbf{a} + c)}\right]^p$$
 
 A dot-product kernel where $c$ is a bias term and $p$ is the polynomial
 degree. Captures non-Euclidean similarity structure. Useful when the
 relevant signal is in the angle and magnitude of feature vectors rather
 than their Euclidean distance.
+
+The raw kernel $(\mathbf{x} \cdot \mathbf{a} + c)^p$ is divided by the larger
+self-similarity (and clamped at 0), which bounds it to $[0, 1]$ with its
+maximum at $\mathbf{a} = \mathbf{x}$, like the other kernels. Unnormalised, it
+grows without limit as $\lVert \mathbf{a} \rVert$ grows, so mutation pushed
+antibodies outward and the longest antibody won every match.
 
 ### Cosine
 

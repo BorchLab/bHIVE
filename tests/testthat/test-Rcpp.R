@@ -194,7 +194,9 @@ test_that("affinity kernels match their formulas", {
   expect_equal(compute_affinity_matrix(Xv, Av, "laplace", alpha = 0.7),
                ref_pairs(Xv, Av, function(x, a) exp(-0.7 * sum(abs(x - a)))))
   expect_equal(compute_affinity_matrix(Xv, Av, "polynomial", c = 0.5, p = 3),
-               ref_pairs(Xv, Av, function(x, a) (sum(x * a) + 0.5)^3))
+               ref_pairs(Xv, Av, function(x, a)
+                 min(1, max(0, (sum(x * a) + 0.5) /
+                              max(sum(x^2) + 0.5, sum(a^2) + 0.5)))^3))
   expect_equal(compute_affinity_matrix(Xv, Av, "cosine"),
                ref_pairs(Xv, Av, cos_sim))
   expect_equal(compute_affinity_matrix(Hx, Ha, "hamming"),
@@ -295,5 +297,21 @@ test_that("clonal selection evaluates clones with every affinity kernel", {
       "uniform", 1.0, 0.5, 1.0, 0.1, 0.9, 0.999, 1e-8, Z, Z)
     expect_true(all(is.finite(res$A)), label = af)
     expect_gte(nrow(res$A), 6L)
+  }
+})
+
+test_that("polynomial affinity is bounded and peaks at the data point", {
+  # The raw kernel (x.a + c)^p grows without limit in ||a||, so lengthening
+  # an antibody along x raised its affinity to x. The bounded kernel must
+  # score a == x highest and penalise a longer copy of it.
+  set.seed(11)
+  x <- matrix(runif(20), 1)
+  A <- rbind(x, 3 * x, 0.5 * x, matrix(runif(60), 3))
+  for (cc in c(0, 1)) {
+    aff <- compute_affinity_matrix(x, A, "polynomial", c = cc, p = 3)
+    expect_true(all(aff >= 0 & aff <= 1), label = paste("c =", cc))
+    expect_equal(aff[1, 1], 1, label = paste("c =", cc))
+    expect_equal(which.max(aff[1, ]), 1L, label = paste("c =", cc))
+    expect_lt(aff[1, 2], 0.5)  # three times too long scores well below a == x
   }
 })

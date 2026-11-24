@@ -45,11 +45,49 @@ static arma::mat affinity_laplace(const arma::mat& X, const arma::mat& A,
   return result;
 }
 
-// Polynomial: (x.y + c)^p
+// Polynomial, bounded: [ (x.a + c) / max(x.x + c, a.a + c) ]^p in [0, 1].
+//
+// The raw kernel (x.a + c)^p is not usable as an affinity, for two reasons.
+// It is unbounded: on 20-40 scaled markers it reaches the thousands, while
+// every SHM step size assumes a value in [0, 1] ((1 - f) in uniform, hotspot
+// and adaptive, (1 - f)^2 in energy, exp(-f / T) in AIRS). And it has no
+// maximum near x: it keeps rising as ||a|| grows along x. So the keep-if-better
+// mutation rule drove antibodies outward without bound (to 1e49-1e137 within
+// 20 iterations on [0, 1] data, until a NaN reached sort_index() and stopped
+// the fit), and top-k selection, class voting and prediction all favoured
+// whichever antibody was longest. Polynomial classification sat at chance
+// (balanced accuracy 0.17 on six classes) under the default uniform SHM.
+//
+// Dividing by the larger self-similarity fixes both. Since
+// x.a <= ||x|| ||a|| <= max(||x||^2, ||a||^2), the base is at most 1, with
+// equality only at a == x, for any c >= 0; and it falls roughly as 1/t when
+// ||a|| grows t-fold, so mutation is pulled back to the cell's scale. (The
+// cosine normalisation K / sqrt(K(x,x) K(a,a)) bounds the value too, but is
+// nearly flat in ||a||: an antibody 20x too long along x still scores about
+// 0.94 on 20 markers, and antibodies kept drifting.) The base is clamped at 0,
+// so a negative x.a + c cannot meet a fractional p.
+static inline double bounded_polynomial(double dot_xa, double dot_xx,
+                                        double dot_aa, double c, double p) {
+  const double denom = std::max(dot_xx + c, dot_aa + c);
+  if (!std::isfinite(dot_xa) || !std::isfinite(denom) || denom < 1e-12) {
+    return 0.0;
+  }
+  const double base = std::max(0.0, std::min(1.0, (dot_xa + c) / denom));
+  return std::pow(base, p);
+}
+
 static arma::mat affinity_polynomial(const arma::mat& X, const arma::mat& A,
                                      double c, double p) {
-  arma::mat dot = X * A.t();  // n x m via BLAS
-  return arma::pow(dot + c, p);
+  const arma::mat dot = X * A.t();            // n x m via BLAS
+  const arma::vec x_sq = arma::sum(X % X, 1);  // n x 1
+  const arma::vec a_sq = arma::sum(A % A, 1);  // m x 1
+  arma::mat result(X.n_rows, A.n_rows);
+  for (arma::uword j = 0; j < A.n_rows; ++j) {
+    for (arma::uword i = 0; i < X.n_rows; ++i) {
+      result(i, j) = bounded_polynomial(dot(i, j), x_sq(i), a_sq(j), c, p);
+    }
+  }
+  return result;
 }
 
 // Cosine similarity: (x.y) / (||x|| * ||y||)
@@ -130,7 +168,8 @@ double affinity_scalar_cpp(const arma::rowvec& x, const arma::rowvec& a,
       return std::exp(-alpha * l1);
     }
     case AffinityType::POLYNOMIAL: {
-      return std::pow(arma::dot(x, a) + c, p);
+      return bounded_polynomial(arma::dot(x, a), arma::dot(x, x),
+                                arma::dot(a, a), c, p);
     }
     case AffinityType::COSINE: {
       const double denom = arma::norm(x) * arma::norm(a);
